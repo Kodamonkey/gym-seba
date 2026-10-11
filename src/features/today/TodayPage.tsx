@@ -185,7 +185,10 @@ export function TodayPage() {
         <SectionTitle action={<Link to="/calendario" className="text-sm text-accent underline">Calendario</Link>}>Esta semana</SectionTitle>
         <Card>
           <p className="text-2xl font-bold tabular">
-            {weekDone.length} <span className="text-base font-normal text-muted">de {weekItems.length} sesiones planificadas registradas</span>
+            {weekDone.length}{' '}
+            <span className="text-base font-normal text-muted">
+              {weekDone.length === 1 ? 'sesión registrada' : 'sesiones registradas'} · {weekItems.length} planificada{weekItems.length === 1 ? '' : 's'} esta semana
+            </span>
           </p>
           <ul className="mt-3 grid grid-cols-7 gap-1 text-center text-xs">
             {Array.from({ length: 7 }, (_, k) => addDays(weekStart, k)).map((d) => {

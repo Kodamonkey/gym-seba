@@ -9,7 +9,7 @@ import { compliance, COMPLIANCE_DEFINITION } from '../../domain/schedule';
 import { sessionActiveMs, totalPausedMs } from '../../domain/timer';
 import type { LocalDate } from '../../domain/types';
 import { formatDecimal, parseDecimal } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { prEntries } from '../../data/sessions';
 import { MUSCLE_BY_ID } from '../../data/seed/muscles';
 import { BarChart, LineChart } from '../../ui/charts';
@@ -87,7 +87,7 @@ export function ProgressPage() {
   );
 
   const selected = keySel && keys.has(keySel) ? keySel : ([...keys.keys()][0] ?? '');
-  const keyEntries = data.entries.filter((e) => e.key === selected && inPeriod(e.at.slice(0, 10)));
+  const keyEntries = data.entries.filter((e) => e.key === selected && inPeriod(e.date));
   const bySession = new Map<string, PREntry[]>();
   for (const e of keyEntries) bySession.set(e.sessionId, [...(bySession.get(e.sessionId) ?? []), e]);
   const sessionPoints = [...bySession.entries()]
@@ -110,7 +110,7 @@ export function ProgressPage() {
     value: es.some((e) => e.durationSec !== null) ? Math.max(...es.map((e) => e.durationSec ?? 0)) : null,
   }));
 
-  const recentNew = prs.events.filter((e) => e.status === 'new' && e.type !== 'reps-at-load' && inPeriod(e.at.slice(0, 10))).slice(-8).reverse();
+  const recentNew = prs.events.filter((e) => e.status === 'new' && e.type !== 'reps-at-load' && inPeriod(e.date)).slice(-8).reverse();
 
   // Resumen muscular de la semana: series de trabajo confirmadas donde el músculo es objetivo.
   const weekStart = startOfWeek(today);
@@ -184,7 +184,7 @@ export function ProgressPage() {
                     <li key={b.type} className="flex justify-between gap-2">
                       <span>{PR_LABEL[b.type]}</span>
                       <Link to={`/historial/${b.sessionId}`} className="tabular text-accent underline">
-                        {formatDecimal(Math.round(b.value * 10) / 10)} {loadUnit(b.type)} · {formatLocalDate(b.at.slice(0, 10))}
+                        {formatDecimal(Math.round(b.value * 10) / 10)} {loadUnit(b.type)} · {formatLocalDate(b.date)}
                       </Link>
                     </li>
                   ))}
@@ -313,7 +313,7 @@ function Measurements({
       setWaist('');
       toast({ message: 'Medición guardada.', tone: 'ok' });
     } catch (e) {
-      onError(describeStorageError(e));
+      onError(userMessage(e));
     }
   }
 

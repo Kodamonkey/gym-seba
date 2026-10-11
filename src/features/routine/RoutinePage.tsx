@@ -7,7 +7,7 @@ import { formatLocalDate, weekdayName } from '../../domain/dates';
 import { loadLabel } from '../../domain/load';
 import type { EquipmentInstance, EquipmentKind, ExerciseVariant, LoadUnit, RoutineTemplate } from '../../domain/types';
 import { parseDecimal } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { saveTemplate, setAdaptationWeeks, setProgramWeekday, syncProgramDays } from '../../data/program';
 import { Button, Card, Dialog, EmptyState, Field, Loading, Pill, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -163,7 +163,7 @@ function ProgramTab() {
         onClose={() => setNewDay(false)}
         title="Nuevo día"
         footer={
-          <Button variant="primary" disabled={!dayName.trim()} onClick={() => addDay().catch((e) => toast({ message: describeStorageError(e), tone: 'error' }))}>
+          <Button variant="primary" disabled={!dayName.trim()} onClick={() => addDay().catch((e) => toast({ message: userMessage(e), tone: 'error' }))}>
             Crear
           </Button>
         }
@@ -299,7 +299,7 @@ function EquipmentDialog({ open, initial, onClose, variants }: { open: boolean; 
       toast({ message: 'Equipo guardado.', tone: 'ok' });
       onClose();
     } catch (e) {
-      setErr(describeStorageError(e));
+      setErr(userMessage(e));
     }
   }
 

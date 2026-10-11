@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useActiveSession } from './hooks';
 import { Button } from '../ui/primitives';
@@ -14,10 +15,18 @@ export function UpdatePrompt() {
     updateServiceWorker,
   } = useRegisterSW({ immediate: true });
 
+  // El aviso de "listo sin conexión" es informativo: se retira solo.
+  useEffect(() => {
+    if (!offlineReady) return;
+    const id = setTimeout(() => setOfflineReady(false), 6000);
+    return () => clearTimeout(id);
+  }, [offlineReady, setOfflineReady]);
+
   if (!needRefresh && !offlineReady) return null;
+  // Flotante: no desplaza el contenido mientras el usuario toca botones.
   return (
-    <div className="mx-auto mt-2 w-full max-w-5xl px-4" role="status">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-4" role="status">
+      <div className="pointer-events-auto mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm shadow-lg">
         {needRefresh ? (
           <>
             <span className="flex-1">

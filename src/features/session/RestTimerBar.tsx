@@ -40,7 +40,7 @@ export function RestTimerBar({ sessionId, canEdit }: { sessionId: string; canEdi
   const pct = timer.durationMs > 0 ? Math.min(100, (100 * (timer.durationMs - remaining)) / timer.durationMs) : 100;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-3" role="region" aria-label="Temporizador de descanso">
+    <div className="rest-timer fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-3" role="region" aria-label="Temporizador de descanso">
       <p className="sr-only" aria-live="polite">
         {announce}
       </p>

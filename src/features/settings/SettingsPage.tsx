@@ -7,7 +7,7 @@ import { formatLocalDate } from '../../domain/dates';
 import type { Preferences, UserProfile } from '../../domain/types';
 import { parseDecimal } from '../../domain/validation';
 import { applyImport, downloadText, exportBackup, exportCsv, markBackupDone, parseBackup, previewImport, type BackupFile, type ImportPolicy, type ImportPreview } from '../../data/backup';
-import { db, describeStorageError, nowIso, USER_TABLES } from '../../data/db';
+import { db, nowIso, USER_TABLES, userMessage } from '../../data/db';
 import { Button, Card, Dialog, Field, Select, SectionTitle, Toggle } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
 
@@ -185,7 +185,7 @@ function BackupSection() {
     const r = parseBackup(text);
     if (!r.ok) return setErrors(r.errors);
     setIncoming(r.data);
-    setPreview(await previewImport(r.data));
+    setPreview(await previewImport(r.data, policy));
   }
 
   const needsBackup = policy !== 'merge-skip';
@@ -240,6 +240,9 @@ function BackupSection() {
               <p>
                 Respaldo del {formatLocalDate(incoming.exportedAt.slice(0, 10), 'long')} (esquema {incoming.schemaVersion}): {preview.totals.incoming} registros —{' '}
                 {preview.totals.added} nuevos, {preview.totals.identical} idénticos, {preview.totals.conflicts} con el mismo id y contenido distinto.
+                {policy === 'replace-all' && (
+                  <strong className="block text-warn">Se eliminarán {preview.totals.removed} registros locales que no están en el archivo.</strong>
+                )}
               </p>
               <details>
                 <summary className="cursor-pointer text-accent">Detalle por tabla</summary>
@@ -250,15 +253,17 @@ function BackupSection() {
                       <th>Nuevos</th>
                       <th>Idénticos</th>
                       <th>Conflictos</th>
+                      {policy === 'replace-all' && <th>Se eliminan</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {USER_TABLES.filter((t) => (preview.tables[t]?.incoming ?? 0) > 0).map((t) => (
+                    {USER_TABLES.filter((t) => (preview.tables[t]?.incoming ?? 0) > 0 || (preview.tables[t]?.removed ?? 0) > 0).map((t) => (
                       <tr key={t}>
                         <td>{t}</td>
                         <td>{preview.tables[t]!.added}</td>
                         <td>{preview.tables[t]!.identical}</td>
                         <td>{preview.tables[t]!.conflicts}</td>
+                        {policy === 'replace-all' && <td>{preview.tables[t]!.removed}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -270,6 +275,7 @@ function BackupSection() {
                 onChange={(v) => {
                   setPolicy(v as ImportPolicy);
                   setBackedUp(false);
+                  void previewImport(incoming, v as ImportPolicy).then(setPreview);
                 }}
                 options={[
                   { value: 'merge-skip', label: 'Añadir solo lo nuevo (conservar lo actual en conflictos)' },
@@ -293,7 +299,8 @@ function BackupSection() {
                     setIncoming(null);
                     setPreview(null);
                   } catch (e) {
-                    toast({ message: `${describeStorageError(e)} La base quedó como estaba.`, tone: 'error' });
+                    const reason = e instanceof Error && e.message.startsWith('La importación') ? e.message : userMessage(e);
+                    toast({ message: `${reason} La base quedó como estaba.`, tone: 'error' });
                   } finally {
                     setBusy(false);
                   }

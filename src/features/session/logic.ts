@@ -13,13 +13,16 @@ export async function confirmWithRecords(set: SetLog, values: SetPatch, se: Sess
   const before = set.kind === 'work' ? await prEntries(key.key) : [];
   const saved = await confirmSet(set.id, values, set.rev);
   if (saved.kind !== 'work' || !key.confirmed) return { saved, records: [] };
+  const session = await db.sessions.get(saved.sessionId);
+  if (!session) return { saved, records: [] };
   const ctx = { ...loadContextOf(se), unit: saved.unit };
   const entry: PREntry = {
     setId: saved.id,
     sessionId: saved.sessionId,
     key: key.key,
-    at: saved.completedAt ?? new Date().toISOString(),
-    order: saved.order,
+    at: session.startedAt,
+    date: session.localDate,
+    order: saved.completedAt ? Date.parse(saved.completedAt) : Date.now(),
     loadKg: se.variant.measure === 'reps' ? normalizedLoadKg(saved.load, ctx) : null,
     reps: se.variant.measure === 'reps' ? saved.reps : null,
     durationSec: se.variant.measure === 'time' ? saved.durationSec : null,
@@ -67,8 +70,11 @@ export function restAfter(set: SetLog, se: SessionExercise): number {
 }
 
 export async function saveEquipmentNote(equipmentId: ID, text: string): Promise<void> {
-  const existing = await db.equipmentNotes.where('equipmentId').equals(equipmentId).first();
   const now = new Date().toISOString();
-  if (existing) await db.equipmentNotes.update(existing.id, { text, updatedAt: now });
-  else await db.equipmentNotes.add({ id: crypto.randomUUID(), equipmentId, text, createdAt: now, updatedAt: now });
+  const id = crypto.randomUUID();
+  await db.transaction('rw', db.equipmentNotes, async () => {
+    const existing = await db.equipmentNotes.where('equipmentId').equals(equipmentId).first();
+    if (existing) await db.equipmentNotes.update(existing.id, { text, updatedAt: now });
+    else await db.equipmentNotes.add({ id, equipmentId, text, createdAt: now, updatedAt: now });
+  });
 }

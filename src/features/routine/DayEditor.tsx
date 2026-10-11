@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useToday } from '../../app/hooks';
 import type { ExerciseVariant, PrescribedExercise, RoutineDay } from '../../domain/types';
-import { db, describeStorageError, uid } from '../../data/db';
+import { db, uid, userMessage } from '../../data/db';
 import { saveTemplate, syncProgramDays } from '../../data/program';
 import { Button, Card, Dialog, EmptyState, Field, Loading, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -68,7 +68,7 @@ export function DayEditor() {
       toast({ message: 'Día guardado (nueva versión de la plantilla). Las sesiones registradas no cambian.', tone: 'ok' });
       navigate('/rutina');
     } catch (e) {
-      toast({ message: describeStorageError(e), tone: 'error' });
+      toast({ message: userMessage(e), tone: 'error' });
     }
   }
 
@@ -205,7 +205,7 @@ export function DayEditor() {
         onClose={() => setRemoving(false)}
         title="Eliminar día"
         footer={
-          <Button variant="danger" onClick={() => removeDay().catch((e) => toast({ message: describeStorageError(e), tone: 'error' }))}>
+          <Button variant="danger" onClick={() => removeDay().catch((e) => toast({ message: userMessage(e), tone: 'error' }))}>
             Eliminar día
           </Button>
         }

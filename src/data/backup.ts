@@ -102,16 +102,102 @@ const mediaSchema = z.looseObject({
     .refine((u) => u === null || /^https:\/\//.test(u), 'solo URLs https'),
   rightsReviewStatus: z.string(),
 });
-const generic = z.looseObject({ id: z.string().min(1).max(200) });
+const unit = z.enum(['kg', 'lb']);
+const nonNegNullable = z.number().finite().nonnegative().nullable();
 
-const TABLE_SCHEMAS: Partial<Record<UserTableName, z.ZodType>> = {
-  setLogs: setLogSchema,
+const profileSchema = z.looseObject({
+  id: z.literal('me'),
+  name: z.string(),
+  heightCm: nonNegNullable,
+  weightKg: nonNegNullable,
+  timeZone: z.string().min(1),
+  onboardedAt: nullableInstant,
+});
+const prefsSchema = z.looseObject({
+  id: z.literal('prefs'),
+  theme: z.enum(['dark', 'light', 'system']),
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  animations: z.enum(['system', 'on', 'off']),
+  backupReminderDays: z.number().int().nonnegative(),
+});
+const exerciseSchema = z.looseObject({ id, name: z.string().min(1), archived: z.boolean() });
+const variantSchema = z.looseObject({
+  id,
+  exerciseId: id,
+  name: z.string().min(1),
+  equipmentKind: z.enum(['machine', 'cable', 'dumbbell', 'barbell', 'smith', 'bodyweight']),
+  laterality: z.enum(['bilateral', 'unilateral']),
+  implements: z.union([z.literal(1), z.literal(2)]),
+  loadConvention: z.enum(['per-implement', 'total-external', 'plates-added', 'machine-stack', 'nominal', 'none']),
+  measure: z.enum(['reps', 'time']),
+  muscles: z.array(z.looseObject({ muscleId: z.string(), role: z.enum(['target', 'synergist', 'stabilizer']) })),
+  technique: z.looseObject({ setup: z.string(), execution: z.string(), avoid: z.array(z.string()) }),
+  clipId: z.string().nullable(),
+});
+const equipmentSchema = z.looseObject({
+  id,
+  name: z.string(),
+  variantIds: z.array(z.string()),
+  status: z.enum(['available', 'unavailable', 'unverified']),
+  unit,
+  minIncrement: z.number().finite().positive().nullable(),
+  declaredBaseResistance: nonNegNullable,
+});
+const equipmentNoteSchema = z.looseObject({ id, equipmentId: id, text: z.string() });
+const prescribedSchema = z.looseObject({
+  id,
+  variantId: id,
+  sets: z.number().int().positive(),
+  repMin: z.number().int().nonnegative(),
+  repMax: z.number().int().nonnegative(),
+  restSec: z.number().int().nonnegative(),
+  alternativeVariantIds: z.array(z.string()),
+});
+const templateSchema = z.looseObject({
+  id,
+  name: z.string(),
+  weeksTotal: z.number().int().positive(),
+  version: z.number().int().positive(),
+  days: z.array(z.looseObject({ id, name: z.string(), weekday: z.number().int().min(1).max(7), exercises: z.array(prescribedSchema) })),
+});
+const versionSchema = z.looseObject({ id, templateId: id, version: z.number().int().positive(), snapshot: templateSchema });
+const programDecisionSchema = z.looseObject({ id, programId: id, kind: z.string(), createdAt: instant });
+const progressionDecisionSchema = z.looseObject({
+  id,
+  comparisonKey: z.string(),
+  decision: z.enum(['accepted', 'postponed', 'adjusted']),
+  toLoad: nonNegNullable,
+  unit,
+});
+const restTimerSchema = z.looseObject({
+  id: z.literal('current'),
+  sessionId: id,
+  startedAt: z.number().finite(),
+  durationMs: z.number().finite().nonnegative(),
+  pausedTotalMs: z.number().finite().nonnegative(),
+  status: z.enum(['running', 'paused', 'finished', 'skipped']),
+});
+
+/** Un esquema por cada tabla exportable: nada se importa validado solo por `id`. */
+const TABLE_SCHEMAS: Record<UserTableName, z.ZodType> = {
+  profile: profileSchema,
+  prefs: prefsSchema,
+  exercises: exerciseSchema,
+  variants: variantSchema,
+  equipment: equipmentSchema,
+  equipmentNotes: equipmentNoteSchema,
+  routineTemplates: templateSchema,
+  routineVersions: versionSchema,
+  programs: programSchema,
+  scheduledWorkouts: scheduledSchema,
+  programDecisions: programDecisionSchema,
   sessions: sessionSchema,
   sessionExercises: sessionExerciseSchema,
+  setLogs: setLogSchema,
+  restTimers: restTimerSchema,
   bodyMeasurements: measurementSchema,
   cardioLogs: cardioSchema,
-  scheduledWorkouts: scheduledSchema,
-  programs: programSchema,
+  progressionDecisions: progressionDecisionSchema,
   media: mediaSchema,
 };
 
@@ -139,7 +225,7 @@ export function parseBackup(text: string): ParseResult {
       errors.push(`Tabla desconocida: ${name}.`);
       continue;
     }
-    const schema = TABLE_SCHEMAS[name as UserTableName] ?? generic;
+    const schema = TABLE_SCHEMAS[name as UserTableName];
     const ids = new Set<string>();
     const ok: Record<string, unknown>[] = [];
     rows.forEach((row, i) => {
@@ -159,6 +245,8 @@ export function parseBackup(text: string): ParseResult {
     });
     tables[name as UserTableName] = ok;
   }
+  const activeInFile = (tables.sessions ?? []).filter((r) => r.status === 'active').length;
+  if (activeInFile > 1) errors.push(`El respaldo contiene ${activeInFile} sesiones en curso; solo puede haber una.`);
   if (errors.length) return { ok: false, errors };
   return { ok: true, data: { app: 'atlas', schemaVersion: env.data.schemaVersion, exportedAt: env.data.exportedAt, tables } };
 }
@@ -172,6 +260,8 @@ export interface TablePreview {
   added: number;
   identical: number;
   conflicts: number;
+  /** Registros locales que desaparecerán (solo con "reemplazar todo"). */
+  removed: number;
 }
 
 export interface ImportPreview {
@@ -180,26 +270,44 @@ export interface ImportPreview {
   totals: TablePreview;
 }
 
-const stable = (o: unknown) => JSON.stringify(o, Object.keys(o as object).sort());
+/** Serialización canónica (claves ordenadas en todos los niveles) para comparar registros. */
+export function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    return `{${Object.keys(o)
+      .filter((k) => o[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical(o[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
 
-export async function previewImport(data: BackupFile): Promise<ImportPreview> {
+export async function previewImport(data: BackupFile, policy: ImportPolicy = 'merge-skip'): Promise<ImportPreview> {
   const out: ImportPreview['tables'] = {};
-  const totals: TablePreview = { incoming: 0, added: 0, identical: 0, conflicts: 0 };
+  const totals: TablePreview = { incoming: 0, added: 0, identical: 0, conflicts: 0, removed: 0 };
   for (const t of USER_TABLES) {
     const rows = data.tables[t] ?? [];
     const existing = await db.table(t).bulkGet(rows.map((r) => r.id as string));
-    const p: TablePreview = { incoming: rows.length, added: 0, identical: 0, conflicts: 0 };
+    const p: TablePreview = { incoming: rows.length, added: 0, identical: 0, conflicts: 0, removed: 0 };
     rows.forEach((r, i) => {
       const cur = existing[i];
       if (!cur) p.added++;
-      else if (stable(cur) === stable(r)) p.identical++;
+      else if (canonical(cur) === canonical(r)) p.identical++;
       else p.conflicts++;
     });
+    if (policy === 'replace-all') {
+      const incomingIds = new Set(rows.map((r) => String(r.id)));
+      const localIds = (await db.table(t).toCollection().primaryKeys()) as string[];
+      p.removed = localIds.filter((k) => !incomingIds.has(String(k))).length;
+    }
     out[t] = p;
     totals.incoming += p.incoming;
     totals.added += p.added;
     totals.identical += p.identical;
     totals.conflicts += p.conflicts;
+    totals.removed += p.removed;
   }
   const activeSessionLocal = (await db.sessions.where('status').equals('active').count()) > 0;
   return { tables: out, activeSessionLocal, totals };
@@ -223,6 +331,11 @@ export async function applyImport(data: BackupFile, policy: ImportPolicy): Promi
         await db.table(t).bulkPut(rows);
         written += rows.length;
       }
+    }
+    // Invariante: como máximo una sesión en curso. Si se rompe, la transacción se revierte entera.
+    const active = await db.sessions.where('status').equals('active').count();
+    if (active > 1) {
+      throw new Error('La importación dejaría dos sesiones en curso. Finaliza o descarta la sesión actual antes de importar.');
     }
   });
   return { written };

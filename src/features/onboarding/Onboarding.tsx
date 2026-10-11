@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { useProfile, useToday } from '../../app/hooks';
 import { formatLocalDate, isLocalDate, weekdayName } from '../../domain/dates';
 import { parseDecimal } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { createProgram } from '../../data/program';
 import { Button, Card, Field, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -92,7 +92,7 @@ export function Onboarding() {
       toast({ message: 'Programa creado. Ya puedes registrar tus sesiones.', tone: 'ok' });
       navigate('/', { replace: true });
     } catch (e) {
-      toast({ message: describeStorageError(e), tone: 'error' });
+      toast({ message: userMessage(e), tone: 'error' });
     } finally {
       setBusy(false);
     }

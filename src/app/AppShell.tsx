@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { useActiveSession, useOnline, usePrefs } from './hooks';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -18,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const inSession = location.pathname === '/sesion';
   const onboarding = location.pathname === '/onboarding';
   const appName = prefs?.appName ?? 'ATLAS — Mi entrenamiento';
+  const typing = useTyping();
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-4">
         {children}
       </main>
-      {!onboarding && (
+      {!onboarding && !typing && (
         <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <ul className="mx-auto grid max-w-5xl grid-cols-4">
             {NAV.map((n) => (
@@ -78,4 +79,29 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
     </div>
   );
+}
+
+/**
+ * Mientras se escribe en un campo en pantallas táctiles, se oculta la navegación inferior
+ * para que el teclado no tape el botón de confirmar ni el temporizador.
+ */
+function useTyping(): boolean {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+    if (!coarse) return;
+    const isField = (el: EventTarget | null) => el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+    const onIn = (e: FocusEvent) => setTyping(isField(e.target));
+    const onOut = () => setTimeout(() => setTyping(isField(document.activeElement)), 0);
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+  useEffect(() => {
+    document.body.dataset.typing = typing ? 'true' : 'false';
+  }, [typing]);
+  return typing;
 }

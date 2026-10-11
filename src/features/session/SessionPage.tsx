@@ -5,7 +5,7 @@ import { useActiveSession, useEditorLock, useNow, usePrefs } from '../../app/hoo
 import { formatDuration } from '../../domain/dates';
 import { isSessionPaused, sessionActiveMs } from '../../domain/timer';
 import type { SessionExercise, SetLog } from '../../domain/types';
-import { db, describeStorageError } from '../../data/db';
+import { db, userMessage } from '../../data/db';
 import { pauseSession, resumeSession } from '../../data/sessions';
 import { Button, EmptyState, Loading, Pill } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -56,6 +56,22 @@ export function SessionPage() {
       // Almacenamiento de sesión no disponible: solo se pierde el ejercicio seleccionado.
     }
   }, [current, storageKey]);
+
+  // Aviso de sesión recuperada (tras recargar, cerrar la app o volver de otra pantalla).
+  useEffect(() => {
+    if (!session) return;
+    const flag = `atlas:recovered:${session.id}`;
+    let shown = false;
+    try {
+      shown = sessionStorage.getItem(flag) === '1';
+      sessionStorage.setItem(flag, '1');
+    } catch {
+      shown = true;
+    }
+    if (!shown && Date.now() - Date.parse(session.startedAt) > 60_000) {
+      toast({ message: 'Sesión recuperada: todo lo que confirmaste está guardado.', tone: 'info' });
+    }
+  }, [session, toast]);
 
   // Mantener la pantalla encendida (opcional y solo si el navegador lo permite).
   useEffect(() => {
@@ -109,7 +125,7 @@ export function SessionPage() {
         <div className="flex gap-2">
           <Button
             disabled={!lock.canEdit}
-            onClick={() => (paused ? resumeSession(session.id) : pauseSession(session.id)).catch((e) => toast({ message: describeStorageError(e), tone: 'error' }))}
+            onClick={() => (paused ? resumeSession(session.id) : pauseSession(session.id)).catch((e) => toast({ message: userMessage(e), tone: 'error' }))}
           >
             {paused ? 'Reanudar' : 'Pausar'}
           </Button>

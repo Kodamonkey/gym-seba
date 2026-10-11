@@ -1,4 +1,5 @@
 import { useId, useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
 
 /**
  * Gráficos SVG de una sola serie: líneas de 2 px, marcadores r ≥ 4 con anillo de superficie,
@@ -75,7 +76,7 @@ function Frame({
             <tbody>
               {points.map((p, i) => (
                 <tr key={`${p.label}-${i}`} className="border-t border-line">
-                  <td className="px-2 py-1">{p.href ? <a href={p.href} className="text-accent underline">{p.label}</a> : p.label}</td>
+                  <td className="px-2 py-1">{p.href ? <Link to={p.href} className="text-accent underline">{p.label}</Link> : p.label}</td>
                   <td className="px-2 py-1">{p.value === null ? 'sin datos' : `${fmt(p.value)} ${unit}`}{p.detail ? ` · ${p.detail}` : ''}</td>
                 </tr>
               ))}

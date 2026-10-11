@@ -5,7 +5,7 @@ import { comparisonKeyOf, describeNormalization, loadContextOf, loadLabel } from
 import { adviseProgression } from '../../domain/progression';
 import type { ExerciseVariant, ProgressionDecision, SessionExercise, SetLog, WorkoutSession } from '../../domain/types';
 import { formatDecimal, parseLoad } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, describeStorageError, nowIso, uid, userMessage } from '../../data/db';
 import {
   addSet,
   removeExerciseFromSession,
@@ -405,7 +405,7 @@ function SubstituteDialog({ open, onClose, session, se, variant }: { open: boole
                   toast({ message: `Cambiado a: ${v.name}.`, tone: 'ok' });
                   onClose();
                 } catch (e) {
-                  toast({ message: describeStorageError(e), tone: 'error' });
+                  toast({ message: userMessage(e), tone: 'error' });
                 }
               }}
             >

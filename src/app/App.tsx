@@ -20,6 +20,19 @@ const SourcesPage = lazy(() => import('../features/settings/SourcesPage').then((
 const Onboarding = lazy(() => import('../features/onboarding/Onboarding').then((m) => ({ default: m.Onboarding })));
 const DemoGallery = lazy(() => import('../features/library/DemoGallery').then((m) => ({ default: m.DemoGallery })));
 
+const DEFAULT_ACCENT = '#3ddc97';
+
+function relativeLuminance(hex: string): number {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return 0.5;
+  const n = parseInt(m[1]!, 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
+    const x = c / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * ch[0]! + 0.7152 * ch[1]! + 0.0722 * ch[2]!;
+}
+
 function ThemeSync() {
   const prefs = usePrefs();
   useEffect(() => {
@@ -29,7 +42,15 @@ function ThemeSync() {
       const resolved = theme === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : theme;
       root.dataset.theme = resolved;
       root.dataset.motion = prefs?.animations ?? 'system';
-      if (prefs?.accent) root.style.setProperty('--accent', prefs.accent);
+      // El acento por defecto usa el tono de cada tema; uno personalizado se aplica con tinta legible.
+      const custom = prefs?.accent && prefs.accent.toLowerCase() !== DEFAULT_ACCENT;
+      if (custom) {
+        root.style.setProperty('--accent', prefs!.accent);
+        root.style.setProperty('--accent-ink', relativeLuminance(prefs!.accent) > 0.35 ? '#062b1b' : '#ffffff');
+      } else {
+        root.style.removeProperty('--accent');
+        root.style.removeProperty('--accent-ink');
+      }
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'light' ? '#f3f4f6' : '#16181c');
       document.title = prefs?.appName ?? 'ATLAS — Mi entrenamiento';
     };

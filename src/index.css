@@ -258,3 +258,8 @@ body {
   background-size: 5px 5px;
 }
 .legend-neutral { background: var(--m-muscle); }
+
+/* Con el teclado abierto la navegación se oculta: el descanso baja al borde inferior. */
+[data-typing='true'] .rest-timer {
+  bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}

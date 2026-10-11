@@ -9,6 +9,7 @@ function entry(p: Partial<PREntry> & { loadKg: number; reps: number }, day = 1):
     sessionId: p.sessionId ?? `sess${day}`,
     key: p.key ?? 'k1',
     at: p.at ?? `2026-10-${String(day).padStart(2, '0')}T12:00:${String(n % 60).padStart(2, '0')}.000Z`,
+    date: `2026-10-${String(day).padStart(2, '0')}`,
     order: n,
     loadKg: p.loadKg,
     reps: p.reps,

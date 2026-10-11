@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { db, describeStorageError } from '../../data/db';
+import { db, userMessage } from '../../data/db';
 import { addExerciseToSession } from '../../data/sessions';
 import { Button, Dialog, Field, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -39,7 +39,7 @@ export function AddExerciseDialog({ open, onClose, sessionId, onAdded }: { open:
               onAdded(id);
               onClose();
             } catch (e) {
-              toast({ message: describeStorageError(e), tone: 'error' });
+              toast({ message: userMessage(e), tone: 'error' });
             }
           }}
         >

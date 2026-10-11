@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router';
 import { useActiveSession, usePrefs, useTimeZone, useToday } from '../../app/hooks';
 import { addDays, diffDays, formatLocalDate, startOfWeek } from '../../domain/dates';
 import { PLAN_STATUS_LABEL, PLAN_STATUS_SYMBOL } from '../../domain/schedule';
-import { db, describeStorageError } from '../../data/db';
+import { db, userMessage } from '../../data/db';
 import { endAdaptation, keepAdaptation, moveScheduledWorkout, setSkipped, startFreeWorkout, startScheduledWorkout } from '../../data/program';
 import { ActiveSessionExistsError } from '../../data/sessions';
 import { Button, Card, Dialog, EmptyState, Field, Loading, Pill, SectionTitle, Select } from '../../ui/primitives';
@@ -53,7 +53,7 @@ export function TodayPage() {
     } catch (e) {
       if (e instanceof ActiveSessionExistsError) {
         toast({ message: e.message, tone: 'error', action: { label: 'Ir a la sesión', run: () => navigate('/sesion') } });
-      } else toast({ message: e instanceof Error && !(e as { name?: string }).name?.includes('Dexie') ? e.message : describeStorageError(e), tone: 'error' });
+      } else toast({ message: userMessage(e), tone: 'error' });
     } finally {
       setBusy(null);
     }

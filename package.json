@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit -p tsconfig.json && vite build && node -e \"require('node:fs').copyFileSync('dist/index.html','dist/404.html')\"",
     "preview": "vite preview",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "coverage:media": "node --experimental-strip-types scripts/gen-coverage.ts"
+    "docs:media": "node -e \"process.env.ATLAS_GEN_DOCS='1';require('node:child_process').execSync('npx vitest run scripts/gen-docs.test.ts',{stdio:'inherit',env:process.env})\""
   },
   "dependencies": {
     "dexie": "^4.4.6",

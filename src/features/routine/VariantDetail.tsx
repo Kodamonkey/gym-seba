@@ -7,7 +7,7 @@ import { formatLocalDate } from '../../domain/dates';
 import { CORRESPONDENCE_LABEL, RIGHTS_LABEL, TECH_LABEL, type ExternalMedia, type MediaType, type RightsStatus } from '../../domain/media';
 import { computePRs, PR_LABEL } from '../../domain/pr';
 import { formatDecimal } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { prEntries } from '../../data/sessions';
 import { Button, Card, Dialog, EmptyState, Field, Loading, Pill, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -117,7 +117,7 @@ export function VariantDetail() {
                         </span>
                         <Link to={`/historial/${r.sessionId}`} className="tabular text-accent underline">
                           {formatDecimal(r.value)}
-                          {r.type === 'max-duration' ? ' s' : r.type === 'max-load' ? ' kg' : ' kg·rep'} · {formatLocalDate(r.at.slice(0, 10))}
+                          {r.type === 'max-duration' ? ' s' : r.type === 'max-load' ? ' kg' : ' kg·rep'} · {formatLocalDate(r.date)}
                         </Link>
                       </li>
                     );
@@ -248,7 +248,7 @@ function MediaDialog({ open, onClose, variantId, exerciseId }: { open: boolean; 
       toast({ message: rights === 'authorized' ? 'Medio registrado.' : 'Medio registrado como pendiente: no se mostrará hasta autorizarlo.', tone: 'ok' });
       onClose();
     } catch (e) {
-      setErr(describeStorageError(e));
+      setErr(userMessage(e));
     }
   }
 

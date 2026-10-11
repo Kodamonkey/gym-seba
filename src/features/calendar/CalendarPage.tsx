@@ -4,9 +4,8 @@ import { useActiveSession, useTimeZone, useToday } from '../../app/hooks';
 import { addDays, addMonths, formatLocalDate, isoWeekday, monthGrid, monthName, parseLocalDate, startOfMonth, startOfWeek, weekdayName } from '../../domain/dates';
 import { PLAN_STATUS_LABEL, PLAN_STATUS_SYMBOL, type PlanStatus } from '../../domain/schedule';
 import type { LocalDate, WorkoutSession } from '../../domain/types';
-import { describeStorageError } from '../../data/db';
+import { userMessage } from '../../data/db';
 import { addManualWorkout, changeRecurrence, deleteScheduledWorkout, setSkipped, startScheduledWorkout } from '../../data/program';
-import { ActiveSessionExistsError } from '../../data/sessions';
 import { Button, Card, Dialog, EmptyState, Field, Loading, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
 import { usePlan, type PlannedItem } from '../plan';
@@ -78,7 +77,7 @@ export function CalendarPage() {
       setMoveTarget(null);
       setSelected(null);
     } catch (e) {
-      toast({ message: e instanceof Error ? e.message : describeStorageError(e), tone: 'error' });
+      toast({ message: userMessage(e), tone: 'error' });
     }
   }
 
@@ -254,7 +253,7 @@ export function CalendarPage() {
                         await startScheduledWorkout(selected.sw.id, tz);
                         navigate('/sesion');
                       } catch (e) {
-                        toast({ message: e instanceof ActiveSessionExistsError ? e.message : describeStorageError(e), tone: 'error' });
+                        toast({ message: userMessage(e), tone: 'error' });
                       }
                     }}
                   >

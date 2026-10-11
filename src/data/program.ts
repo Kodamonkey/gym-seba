@@ -95,9 +95,11 @@ export async function addManualWorkout(programId: ID, dayId: ID, date: LocalDate
 }
 
 export async function deleteScheduledWorkout(swId: ID): Promise<void> {
-  const sw = await db.scheduledWorkouts.get(swId);
-  if (sw?.sessionId) throw new Error('No se puede eliminar una sesión planificada que ya tiene registro.');
-  await db.scheduledWorkouts.delete(swId);
+  await db.transaction('rw', db.scheduledWorkouts, async () => {
+    const sw = await db.scheduledWorkouts.get(swId);
+    if (sw?.sessionId) throw new Error('No se puede eliminar una sesión planificada que ya tiene registro.');
+    await db.scheduledWorkouts.delete(swId);
+  });
 }
 
 /**
@@ -122,8 +124,14 @@ export async function changeRecurrence(
     const updated: Program = { ...program, weekdays: { ...program.weekdays, [sw.dayId]: weekday }, updatedAt: now };
     await db.programs.put(updated);
 
+    // Las futuras movidas a mano u omitidas a propósito conservan la decisión del usuario.
     const future = (await db.scheduledWorkouts.where('programId').equals(program.id).toArray()).filter(
-      (x) => x.dayId === sw.dayId && x.date >= sw.date && x.sessionId === null && x.origin === 'rule',
+      (x) =>
+        x.dayId === sw.dayId &&
+        x.date >= sw.date &&
+        x.sessionId === null &&
+        x.origin === 'rule' &&
+        (x.id === sw.id || (x.movedFrom === null && !x.skippedConfirmed)),
     );
     await db.scheduledWorkouts.bulkDelete(future.map((x) => x.id));
     const from = newDate < sw.date ? newDate : sw.date;
@@ -248,17 +256,18 @@ export async function setProgramWeekday(programId: ID, dayId: ID, weekday: numbe
 
 /** Añade al calendario los días nuevos de la plantilla y retira los de días eliminados (solo futuros sin registro). */
 export async function syncProgramDays(programId: ID, from: LocalDate): Promise<void> {
-  const program = await db.programs.get(programId);
-  const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
-  if (!program || !template) return;
-  const dayIds = new Set(template.days.map((d) => d.id));
-  await db.transaction('rw', [db.programs, db.scheduledWorkouts], async () => {
+  await db.transaction('rw', [db.programs, db.routineTemplates, db.scheduledWorkouts], async () => {
+    // Lectura dentro de la transacción: no se reactiva un programa archivado ni se pisan otros cambios.
+    const program = await db.programs.get(programId);
+    const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
+    if (!program || !template || program.status !== 'active') return;
+    const dayIds = new Set(template.days.map((d) => d.id));
     const weekdays = { ...program.weekdays };
     for (const d of template.days) if (!(d.id in weekdays)) weekdays[d.id] = d.weekday;
     for (const id of Object.keys(weekdays)) if (!dayIds.has(id)) delete weekdays[id];
     const now = nowIso();
+    await db.programs.update(programId, { weekdays, updatedAt: now });
     const updated: Program = { ...program, weekdays, updatedAt: now };
-    await db.programs.put(updated);
     const all = await db.scheduledWorkouts.where('programId').equals(programId).toArray();
     const orphan = all.filter((x) => !dayIds.has(x.dayId) && x.date >= from && x.sessionId === null);
     await db.scheduledWorkouts.bulkDelete(orphan.map((x) => x.id));

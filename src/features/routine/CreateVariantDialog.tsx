@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { EquipmentKind, ExerciseVariant, Laterality, LoadConvention, MeasureKind, MuscleRole } from '../../domain/types';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { MUSCLES } from '../../data/seed/muscles';
 import { Button, Dialog, Field, Select } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -88,7 +88,7 @@ export function CreateVariantDialog({ open, onClose, baseVariant }: { open: bool
       onClose();
       navigate(`/biblioteca/${v.id}`);
     } catch (e) {
-      setErr(describeStorageError(e));
+      setErr(userMessage(e));
     }
   }
 

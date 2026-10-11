@@ -146,3 +146,9 @@ export function describeStorageError(err: unknown): string {
   }
   return 'No se pudo guardar en el almacenamiento local. Tus datos siguen en pantalla; reintenta.';
 }
+
+/** Mensaje para el usuario: errores de negocio tal cual; errores de almacenamiento traducidos. */
+export function userMessage(err: unknown): string {
+  if (err instanceof Error && (err.name === 'Error' || err.name === 'ActiveSessionExistsError' || err.name === 'ConflictError')) return err.message;
+  return describeStorageError(err);
+}

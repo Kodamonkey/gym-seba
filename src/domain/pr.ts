@@ -1,4 +1,4 @@
-import type { ID, Instant, SetLog, WorkoutSession } from './types';
+import type { ID, Instant, LocalDate, SetLog, WorkoutSession } from './types';
 
 /**
  * Récords personales por contexto comparable. Son siempre derivados de los registros:
@@ -26,8 +26,11 @@ export interface PREntry {
   setId: ID;
   sessionId: ID;
   key: string;
-  /** Instante de confirmación (o del inicio de sesión si falta). */
+  /** Inicio de la sesión: define el orden cronológico entre sesiones. */
   at: Instant;
+  /** Fecha local de la sesión (para mostrar). */
+  date: LocalDate;
+  /** Desempate dentro de la sesión (p. ej. instante de confirmación en ms). */
   order: number;
   /** Carga normalizada en kg; null si no aplica. */
   loadKg: number | null;
@@ -43,6 +46,7 @@ export interface PREvent {
   setId: ID;
   sessionId: ID;
   at: Instant;
+  date: LocalDate;
   value: number;
   previous: number | null;
   /** Para `reps-at-load`: la carga a la que se refiere. */
@@ -56,6 +60,7 @@ export interface PRBest {
   setId: ID;
   sessionId: ID;
   at: Instant;
+  date: LocalDate;
   loadKg?: number;
 }
 
@@ -109,6 +114,7 @@ export function computePRs(entries: PREntry[]): PRResult {
       setId: e.setId,
       sessionId: e.sessionId,
       at: e.at,
+      date: e.date,
       value,
       previous: prev?.value ?? null,
       ...extra,
@@ -121,6 +127,7 @@ export function computePRs(entries: PREntry[]): PRResult {
         setId: e.setId,
         sessionId: e.sessionId,
         at: e.at,
+        date: e.date,
         ...(extra.loadKg !== undefined ? { loadKg: extra.loadKg } : {}),
       });
     }

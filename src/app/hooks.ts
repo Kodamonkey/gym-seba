@@ -117,6 +117,8 @@ export function useEditorLock(sessionId: string | null | undefined) {
       const opts: LockOptions = mode === 'try' ? { ifAvailable: true } : mode === 'steal' ? { steal: true } : { signal: ac.signal };
       locks
         .request(name, opts, async (lock) => {
+          // Si el efecto ya se limpió (desmontaje, StrictMode), no retener el bloqueo.
+          if (ac.signal.aborted) return;
           if (!lock) {
             setState('viewer');
             // Esperar a que la otra pestaña libere el control.

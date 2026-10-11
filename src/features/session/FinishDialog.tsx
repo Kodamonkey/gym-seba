@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import type { WorkoutSession } from '../../domain/types';
 import { parseDecimal } from '../../domain/validation';
-import { db, describeStorageError, nowIso, uid } from '../../data/db';
+import { db, nowIso, uid, userMessage } from '../../data/db';
 import { discardSession, finishSession, sessionCompleteness, updateSessionNotes } from '../../data/sessions';
 import { Button, Dialog, Field } from '../../ui/primitives';
 import { useToast } from '../../ui/toast';
@@ -39,7 +39,7 @@ export function FinishDialog({ open, onClose, session, onDone }: { open: boolean
       toast({ message: status === 'completed' ? 'Sesión completada y guardada.' : 'Sesión guardada como parcial.', tone: 'ok' });
       onDone(session.id);
     } catch (e) {
-      setErr(describeStorageError(e));
+      setErr(userMessage(e));
     } finally {
       setBusy(false);
     }

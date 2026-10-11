@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadLabel } from '../../domain/load';
 import type { SessionExercise, SetLog } from '../../domain/types';
 import { checkSetForConfirm, formatDecimal, parseDuration, parseLoad, parseReps, parseRir } from '../../domain/validation';
-import { ConflictError, describeStorageError } from '../../data/db';
+import { userMessage } from '../../data/db';
 import { addSet, deleteSet, moveSet, restoreSet, uncompleteSet, updateSet } from '../../data/sessions';
 import { startRestTimer } from '../../data/timers';
 import { usePrefs } from '../../app/hooks';
@@ -55,10 +55,12 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
   const done = set.status === 'completed';
   const locked = !canEdit || (done && !editing);
 
-  // Sincroniza con cambios externos (otra pestaña, deshacer) cuando no se está editando.
+  // Sincroniza con cambios externos (otra pestaña, deshacer) cuando no se está editando
+  // ni hay un guardado propio en curso (no pisa lo recién escrito).
   const focused = useRef(false);
+  const saving = useRef(0);
   useEffect(() => {
-    if (focused.current) return;
+    if (focused.current || saving.current > 0) return;
     setLoad(formatDecimal(set.load));
     setReps(set.reps?.toString() ?? '');
     setDur(durationText(set.durationSec));
@@ -95,16 +97,23 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
     if (v.load === set.load && v.reps === set.reps && v.durationSec === set.durationSec && v.rir === set.rir) return;
     if (done) return; // las correcciones de series confirmadas se guardan con el botón
     setSave('saving');
+    saving.current += 1;
     try {
-      const pr = updateSet(set.id, v, revRef.current).then((saved) => {
-        revRef.current = saved.rev;
-      });
+      // Los guardados se encadenan: cada uno usa la revisión que dejó el anterior.
+      const pr = (pending.current ?? Promise.resolve())
+        .catch(() => undefined)
+        .then(() => updateSet(set.id, v, revRef.current))
+        .then((saved) => {
+          revRef.current = saved.rev;
+        });
       pending.current = pr;
       await pr;
       setSave('saved');
     } catch (e) {
       setSave('error');
-      setErr(e instanceof ConflictError ? 'Esta serie cambió en otra pestaña. Revisa los valores.' : describeStorageError(e));
+      setErr(userMessage(e));
+    } finally {
+      saving.current -= 1;
     }
   }
 
@@ -159,7 +168,7 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
       }
     } catch (e) {
       setSave('error');
-      setErr(e instanceof ConflictError ? 'Esta serie cambió en otra pestaña. Revisa los valores y vuelve a confirmar.' : describeStorageError(e));
+      setErr(userMessage(e));
     } finally {
       busy.current = false;
       setConfirming(false);
@@ -267,7 +276,7 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
           <Button size="sm" onClick={() => moveSet(set.id, 1)}>
             ↓ Bajar
           </Button>
-          <Button size="sm" onClick={() => updateSet(set.id, { kind: set.kind === 'work' ? 'warmup' : 'work' }, set.rev).catch((e) => setErr(describeStorageError(e)))}>
+          <Button size="sm" onClick={() => updateSet(set.id, { kind: set.kind === 'work' ? 'warmup' : 'work' }, set.rev).catch((e) => setErr(userMessage(e)))}>
             {set.kind === 'work' ? 'Marcar calentamiento' : 'Marcar de trabajo'}
           </Button>
           {done && (
@@ -347,7 +356,7 @@ function NumInput({
           onBlur={onBlur}
           onFocus={(e) => {
             onFocus();
-            e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            ensureVisible(e.currentTarget);
           }}
           placeholder={placeholder}
           disabled={disabled}
@@ -361,4 +370,19 @@ function NumInput({
       </div>
     </label>
   );
+}
+
+/**
+ * Tras abrir el teclado, si el campo quedó tapado (teclado, temporizador o barra inferior),
+ * lo desplaza de forma instantánea. Sin animación, para no mover botones mientras se tocan.
+ */
+function ensureVisible(el: HTMLElement) {
+  window.setTimeout(() => {
+    if (document.activeElement !== el) return;
+    const vv = window.visualViewport;
+    const height = vv ? vv.height : window.innerHeight;
+    const rect = el.getBoundingClientRect();
+    const reserved = 150;
+    if (rect.bottom > height - reserved || rect.top < 64) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }, 300);
 }

@@ -131,6 +131,11 @@ export async function startSession(input: StartSessionInput): Promise<WorkoutSes
   return db.transaction('rw', [db.sessions, db.sessionExercises, db.setLogs, db.scheduledWorkouts, db.variants, db.equipment, db.meta], async () => {
     const active = await db.sessions.where('status').equals('active').first();
     if (active) throw new ActiveSessionExistsError(active.id);
+    if (input.scheduledWorkoutId) {
+      const sw = await db.scheduledWorkouts.get(input.scheduledWorkoutId);
+      if (!sw) throw new Error('La sesión planificada ya no existe.');
+      if (sw.sessionId !== null) throw new Error('Esta sesión planificada ya tiene un registro. Ábrelo desde el calendario para corregirlo.');
+    }
 
     const session: WorkoutSession = {
       id: uid(),
@@ -194,7 +199,12 @@ export async function updateSet(setId: ID, patch: SetPatch, expectedRev: number)
 export async function confirmSet(setId: ID, values: SetPatch, expectedRev: number): Promise<SetLog> {
   return db.transaction('rw', [db.setLogs, db.sessionExercises, db.sessions], async () => {
     const set = await mustGetSet(setId);
-    if (set.status === 'completed' && set.deletedAt === null) return set;
+    if (set.status === 'completed' && set.deletedAt === null) {
+      // Doble toque con los mismos valores: no se duplica ni se re-escribe la fecha.
+      const same = (Object.keys(values) as (keyof SetPatch)[]).every((k) => set[k] === values[k]);
+      if (same) return set;
+      throw new ConflictError('Esta serie ya estaba confirmada con otros valores (quizá en otra pestaña). Revisa y corrige si hace falta.');
+    }
     if (set.rev !== expectedRev) throw new ConflictError();
     const se = await db.sessionExercises.get(set.sessionExerciseId);
     const session = await db.sessions.get(set.sessionId);
@@ -327,6 +337,9 @@ export async function setUnilateralLogging(seId: ID, mode: SessionExercise['unil
     if (sets.some((s) => s.status === 'completed' && s.deletedAt === null)) {
       throw new Error('Ya hay series confirmadas: no se puede cambiar la forma de registrar los lados.');
     }
+    if (sets.some((s) => s.deletedAt === null && (s.load !== null || s.reps !== null || s.durationSec !== null || s.rir !== null))) {
+      throw new Error('Hay valores escritos sin confirmar: confírmalos o bórralos antes de cambiar la forma de registrar los lados.');
+    }
     const now = nowIso();
     await db.setLogs.bulkDelete(sets.map((s) => s.id));
     const count = se.prescribed.sets;
@@ -381,8 +394,13 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
       return se.id;
     }
 
-    const remaining = Math.max(1, se.prescribed.sets - completed.filter((s) => s.kind === 'work').length);
     const siblings = await db.sessionExercises.where('sessionId').equals(se.sessionId).toArray();
+    // Idempotencia: un segundo toque (u otra pestaña) no añade otra alternativa igual.
+    const existing = siblings.find((s) => s.substitutedFromVariantId === se.variantId && s.variantId === v.id);
+    if (existing) return existing.id;
+    const rowsPerSet = se.variant.laterality === 'unilateral' && se.unilateralLogging === 'per-side-rows' ? 2 : 1;
+    const doneSets = Math.floor(completed.filter((s) => s.kind === 'work').length / rowsPerSet);
+    const remaining = Math.max(1, se.prescribed.sets - doneSets);
     for (const s of siblings) {
       if (s.order > se.order) await db.sessionExercises.update(s.id, { order: s.order + 1 });
     }
@@ -575,8 +593,10 @@ export async function prEntries(filterKey?: string): Promise<PREntry[]> {
       setId: set.id,
       sessionId: set.sessionId,
       key,
-      at: set.completedAt ?? session!.startedAt,
-      order: set.order,
+      // Orden cronológico por la sesión (una serie añadida tarde a una sesión pasada sigue siendo de esa fecha).
+      at: session!.startedAt,
+      date: session!.localDate,
+      order: set.completedAt ? Date.parse(set.completedAt) : se.order * 1000 + set.order,
       loadKg: se.variant.measure === 'reps' ? normalizedLoadKg(set.load, ctx) : null,
       reps: se.variant.measure === 'reps' ? set.reps : null,
       durationSec: se.variant.measure === 'time' ? set.durationSec : null,

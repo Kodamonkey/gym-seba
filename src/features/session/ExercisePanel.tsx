@@ -39,6 +39,11 @@ export function ExercisePanel({ session, se, sets, canEdit }: Props) {
   const [sugg, setSugg] = useState<{ prev: Awaited<ReturnType<typeof suggestionsFor>>['prev']; byOrder: Map<number, Suggestion> } | null>(null);
   const [subOpen, setSubOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
+  // Estado optimista de los controles (la base confirma en milisegundos y se re-sincroniza).
+  const [tech, setTech] = useState(se.techniqueConfirmed);
+  const [pain, setPain] = useState(se.painReported);
+  useEffect(() => setTech(se.techniqueConfirmed), [se.techniqueConfirmed]);
+  useEffect(() => setPain(se.painReported), [se.painReported]);
   const key = comparisonKeyOf(se);
 
   useEffect(() => {
@@ -228,13 +233,31 @@ export function ExercisePanel({ session, se, sets, canEdit }: Props) {
               { v: null, l: 'Sin indicar' },
             ].map((o) => (
               <label key={String(o.v)} className="flex min-h-11 items-center gap-2">
-                <input type="radio" name={`tech-${se.id}`} checked={se.techniqueConfirmed === o.v} onChange={() => updateSessionExercise(se.id, { techniqueConfirmed: o.v })} className="h-5 w-5" />
+                <input
+                  type="radio"
+                  name={`tech-${se.id}`}
+                  checked={tech === o.v}
+                  onChange={() => {
+                    setTech(o.v);
+                    void updateSessionExercise(se.id, { techniqueConfirmed: o.v });
+                  }}
+                  className="h-5 w-5"
+                />
                 {o.l}
               </label>
             ))}
           </fieldset>
           <label className="flex min-h-11 items-center gap-2">
-            <input type="checkbox" checked={se.painReported} disabled={!canEdit} onChange={(e) => updateSessionExercise(se.id, { painReported: e.target.checked })} className="h-5 w-5" />
+            <input
+              type="checkbox"
+              checked={pain}
+              disabled={!canEdit}
+              onChange={(e) => {
+                setPain(e.target.checked);
+                void updateSessionExercise(se.id, { painReported: e.target.checked });
+              }}
+              className="h-5 w-5"
+            />
             Sentí dolor inusual (detén la serie y consulta si persiste)
           </label>
           <NotesField value={se.notes} disabled={!canEdit} onSave={(notes) => updateSessionExercise(se.id, { notes })} />

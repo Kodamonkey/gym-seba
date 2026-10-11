@@ -50,7 +50,7 @@ export const legPress: Clip = {
   id: 'v-leg-press',
   view: 'side',
   viewLabel: 'Vista lateral',
-  viewBox: [-75, -70, 175, 180],
+  viewBox: [-45, -45, 150, 155],
   floorY: FLOOR,
   seconds: 3.6,
   kind: 'reps',

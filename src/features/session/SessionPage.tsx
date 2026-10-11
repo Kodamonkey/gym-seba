@@ -97,7 +97,7 @@ export function SessionPage() {
   const idx = cur ? ses.indexOf(cur) : -1;
 
   return (
-    <div className="flex flex-col gap-3 pb-24">
+    <div className="flex flex-col gap-3 pb-40">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold">{session.title}</h1>

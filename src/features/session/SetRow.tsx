@@ -18,6 +18,8 @@ interface Props {
   suggestion?: Suggestion | undefined;
   canEdit: boolean;
   workNumber: number | null;
+  /** Corrección de una sesión pasada: sin descanso ni celebración. */
+  historical?: boolean;
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -28,7 +30,7 @@ const durationText = (s: number | null) => (s === null ? '' : s >= 60 ? `${Math.
  * Fila de serie. Los valores sugeridos aparecen como marcador (no cuentan).
  * Los borradores se guardan al salir del campo; "Guardado" se muestra solo tras escribir.
  */
-export function SetRow({ set, se, suggestion, canEdit, workNumber }: Props) {
+export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }: Props) {
   const toast = useToast();
   const prefs = usePrefs();
   const [load, setLoad] = useState(formatDecimal(set.load));
@@ -140,6 +142,10 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber }: Props) {
       const { saved, records } = await confirmWithRecords({ ...set, rev: revRef.current }, p.values, se);
       revRef.current = saved.rev;
       setSave('saved');
+      if (historical) {
+        toast({ message: 'Serie registrada en la sesión pasada. Las estadísticas se recalcularon.', tone: 'ok', action: { label: 'Deshacer', run: () => void uncompleteSet(saved.id) } });
+        return;
+      }
       const rest = restAfter(saved, se);
       if (rest > 0 && (prefs?.autoStartRest ?? true)) await startRestTimer(se.sessionId, saved.id, rest);
       if (records.length) {
@@ -333,7 +339,7 @@ function NumInput({
       <span className="sr-only">{label}</span>
       <div className="relative">
         <input
-          className="h-12 w-full min-w-0 rounded-lg border border-line bg-surface px-2 pr-8 text-lg font-semibold tabular placeholder:font-normal placeholder:text-faint disabled:bg-transparent disabled:text-text"
+          className="h-12 w-full min-w-0 rounded-lg border border-line bg-surface pl-2 pr-6 text-base font-semibold tabular placeholder:font-normal placeholder:text-faint disabled:bg-transparent disabled:text-text"
           size={1}
           inputMode={decimal ? 'decimal' : 'numeric'}
           value={value}
@@ -349,7 +355,7 @@ function NumInput({
           enterKeyHint="next"
           autoComplete="off"
         />
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-faint" aria-hidden>
+        <span className="pointer-events-none absolute right-1.5 top-1 text-[10px] text-faint" aria-hidden>
           {short}
         </span>
       </div>

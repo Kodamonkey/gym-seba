@@ -225,3 +225,53 @@ export async function saveTemplate(next: RoutineTemplate): Promise<RoutineTempla
   });
 }
 
+
+/**
+ * Cambia el día de la semana de un día de la rutina desde `from` en adelante.
+ * Regenera solo instancias futuras sin registro; nunca toca sesiones realizadas ni reprogramadas a mano.
+ */
+export async function setProgramWeekday(programId: ID, dayId: ID, weekday: number, from: LocalDate): Promise<void> {
+  await db.transaction('rw', [db.programs, db.scheduledWorkouts], async () => {
+    const program = await db.programs.get(programId);
+    if (!program) return;
+    const now = nowIso();
+    const updated: Program = { ...program, weekdays: { ...program.weekdays, [dayId]: weekday }, updatedAt: now };
+    await db.programs.put(updated);
+    const all = await db.scheduledWorkouts.where('programId').equals(programId).toArray();
+    const stale = all.filter((x) => x.dayId === dayId && x.date >= from && x.sessionId === null && x.origin === 'rule' && x.movedFrom === null && !x.skippedConfirmed);
+    await db.scheduledWorkouts.bulkDelete(stale.map((x) => x.id));
+    const keep = new Set(all.filter((x) => x.dayId === dayId && !stale.includes(x)).map((x) => x.date));
+    const fresh = recurrenceDates(updated, [dayId]).filter((d) => d.date >= from && !keep.has(d.date));
+    await db.scheduledWorkouts.bulkAdd(fresh.map((d) => scheduled(programId, d.dayId, d.date, 'rule', now)));
+  });
+}
+
+/** Añade al calendario los días nuevos de la plantilla y retira los de días eliminados (solo futuros sin registro). */
+export async function syncProgramDays(programId: ID, from: LocalDate): Promise<void> {
+  const program = await db.programs.get(programId);
+  const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
+  if (!program || !template) return;
+  const dayIds = new Set(template.days.map((d) => d.id));
+  await db.transaction('rw', [db.programs, db.scheduledWorkouts], async () => {
+    const weekdays = { ...program.weekdays };
+    for (const d of template.days) if (!(d.id in weekdays)) weekdays[d.id] = d.weekday;
+    for (const id of Object.keys(weekdays)) if (!dayIds.has(id)) delete weekdays[id];
+    const now = nowIso();
+    const updated: Program = { ...program, weekdays, updatedAt: now };
+    await db.programs.put(updated);
+    const all = await db.scheduledWorkouts.where('programId').equals(programId).toArray();
+    const orphan = all.filter((x) => !dayIds.has(x.dayId) && x.date >= from && x.sessionId === null);
+    await db.scheduledWorkouts.bulkDelete(orphan.map((x) => x.id));
+    const taken = new Set(all.filter((x) => dayIds.has(x.dayId)).map((x) => `${x.dayId}@${x.date}`));
+    const fresh = recurrenceDates(updated, [...dayIds]).filter((d) => d.date >= from && !taken.has(`${d.dayId}@${d.date}`));
+    const existingDays = new Set(all.map((x) => x.dayId));
+    await db.scheduledWorkouts.bulkAdd(
+      fresh.filter((d) => !existingDays.has(d.dayId)).map((d) => scheduled(programId, d.dayId, d.date, 'rule', now)),
+    );
+  });
+}
+
+export async function setAdaptationWeeks(programId: ID, weeks: number): Promise<void> {
+  await db.programs.update(programId, { adaptationWeeks: Math.max(0, Math.round(weeks)), updatedAt: nowIso() });
+  await recordDecision(programId, 'other', `Semanas de adaptación ajustadas a ${Math.max(0, Math.round(weeks))}.`);
+}

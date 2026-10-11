@@ -1,0 +1,257 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de diseño. Los valores semánticos cambian por tema; las utilidades de Tailwind
+ * apuntan a estas variables (bg-surface, text-muted, etc.).
+ */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #121417;
+  --surface: #1b1e23;
+  --surface-2: #23272e;
+  --surface-3: #2c313a;
+  --border: #353b45;
+  --text: #eef0f3;
+  --muted: #a3aab5;
+  --faint: #757d89;
+  --accent: #3ddc97;
+  --accent-ink: #062b1b;
+  --danger: #ff6b6b;
+  --warn: #f5b13d;
+  --ok: #3ddc97;
+  --info: #6aa4ff;
+  --focus: #9ad0ff;
+
+  /* Anatomía */
+  --m-stage: #17191d;
+  --m-skin: #c4cad3;
+  --m-skin-line: #6d7581;
+  --m-muscle: #d3d8df;
+  --m-muscle-line: #8d96a2;
+  --m-far: rgba(18, 20, 24, 0.38);
+  --m-target: #ff5a4e;
+  --m-target-line: #b8261c;
+  --m-syn: #f5b13d;
+  --m-syn-line: #9b6a10;
+  --m-stab: #4f8cff;
+  --m-stab-line: #1f4fb0;
+  --eq-frame: #5b636f;
+  --eq-frame-line: #3b414a;
+  --eq-pad: #4b525e;
+  --eq-pad-line: #23272d;
+  --eq-metal: #aab2bd;
+  --eq-plate: #2b3037;
+  --eq-plate-line: #6b7480;
+  --eq-stack: #444b55;
+  --eq-stack-live: #737c88;
+  --eq-cable: #b5bcc6;
+  --eq-floor: #23272e;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #f0f1f4;
+  --surface-3: #e4e7ec;
+  --border: #d3d7de;
+  --text: #15181d;
+  --muted: #535b66;
+  --faint: #7a828d;
+  --accent: #0f8f5c;
+  --accent-ink: #ffffff;
+  --danger: #c62828;
+  --warn: #9a6200;
+  --ok: #0f8f5c;
+  --info: #1d5fd1;
+  --focus: #1d5fd1;
+
+  --m-stage: #eef0f3;
+  --m-skin: #c9ced6;
+  --m-skin-line: #6a727e;
+  --m-muscle: #d9dde3;
+  --m-muscle-line: #8a939f;
+  --m-far: rgba(60, 66, 76, 0.28);
+  --m-target: #f0473b;
+  --m-target-line: #a51d14;
+  --m-syn: #f0a321;
+  --m-syn-line: #8c5c05;
+  --m-stab: #3a78f0;
+  --m-stab-line: #1b4aa8;
+  --eq-frame: #7d8591;
+  --eq-frame-line: #4f5661;
+  --eq-pad: #4a505a;
+  --eq-pad-line: #2d3239;
+  --eq-metal: #9aa2ad;
+  --eq-plate: #3a4048;
+  --eq-plate-line: #6b7480;
+  --eq-stack: #5f6773;
+  --eq-stack-live: #8b939e;
+  --eq-cable: #6b7480;
+  --eq-floor: #d7dbe1;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --color-m-target: var(--m-target);
+  --color-m-syn: var(--m-syn);
+  --color-m-stab: var(--m-stab);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Microanimaciones: breves y desactivables. */
+.anim-pop {
+  animation: pop 220ms ease-out;
+}
+.anim-fade {
+  animation: fade 180ms ease-out;
+}
+.anim-celebrate {
+  animation: celebrate 900ms ease-out;
+}
+@keyframes pop {
+  0% { transform: scale(0.94); }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes celebrate {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+  100% { box-shadow: 0 0 0 18px transparent; }
+}
+[data-motion='off'] *,
+[data-motion='off'] *::before,
+[data-motion='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-motion='system'] *,
+  [data-motion='system'] *::before,
+  [data-motion='system'] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Escena anatómica ---------- */
+.anatomy-stage {
+  background: var(--m-stage);
+}
+.anatomy-stage path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.anatomy-stage .sk {
+  fill: var(--m-skin);
+  stroke: var(--m-skin-line);
+  stroke-width: 0.45;
+}
+.anatomy-stage .mu {
+  fill: var(--m-muscle);
+  stroke: var(--m-muscle-line);
+  stroke-width: 0.3;
+  stroke-opacity: 0.75;
+}
+.anatomy-stage .dt {
+  fill: none;
+  stroke: var(--m-skin-line);
+  stroke-width: 0.35;
+}
+.anatomy-stage .r-target {
+  fill: var(--m-target);
+  stroke: var(--m-target-line);
+  stroke-width: 0.5;
+}
+.anatomy-stage .r-syn {
+  fill: var(--hatch-url);
+  stroke: var(--m-syn-line);
+  stroke-width: 0.5;
+}
+.anatomy-stage[data-stab='on'] .r-stab {
+  fill: var(--dots-url);
+  stroke: var(--m-stab-line);
+  stroke-width: 0.5;
+}
+.anatomy-stage .far {
+  filter: brightness(0.72);
+}
+.anatomy-stage .ghost.sk {
+  fill-opacity: 0.35;
+}
+.anatomy-stage .ghost.mu:not(.r-target):not(.r-syn) {
+  fill-opacity: 0.2;
+}
+.anatomy-stage .ghost {
+  stroke-opacity: 0.7;
+}
+.anatomy-stage .eq-floor { fill: var(--eq-floor); }
+.anatomy-stage .eq-frame { fill: var(--eq-frame); stroke: var(--eq-frame-line); stroke-width: 0.5; }
+.anatomy-stage .eq-pad { fill: var(--eq-pad); stroke: var(--eq-pad-line); stroke-width: 0.5; }
+.anatomy-stage .eq-metal { fill: var(--eq-metal); stroke: var(--eq-frame-line); stroke-width: 0.4; }
+.anatomy-stage .eq-plate { fill: var(--eq-plate); stroke: var(--eq-plate-line); stroke-width: 0.6; }
+.anatomy-stage .eq-plate-inner { fill: none; stroke: var(--eq-plate-line); stroke-width: 0.5; }
+.anatomy-stage .eq-stack { fill: var(--eq-stack); stroke: var(--eq-frame-line); stroke-width: 0.4; }
+.anatomy-stage .eq-stack-live { fill: var(--eq-stack-live); stroke: var(--eq-frame-line); stroke-width: 0.4; }
+.anatomy-stage .eq-cable { fill: none; stroke: var(--eq-cable); stroke-width: 0.7; }
+.anatomy-stage .eq-ghost { fill: var(--eq-frame); opacity: 0.45; }
+.anatomy-stage .eq-see { fill-opacity: 0.3; stroke-opacity: 0.7; }
+.anatomy-stage .eq-arrow { fill: none; stroke: var(--accent); stroke-width: 0.9; stroke-dasharray: 2 1.6; }
+
+.legend-swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 4px;
+  flex: none;
+  border: 1px solid var(--border);
+}
+.legend-target { background: var(--m-target); }
+.legend-syn {
+  background: repeating-linear-gradient(135deg, var(--m-syn) 0 3px, color-mix(in srgb, var(--m-syn) 55%, #000) 3px 5px);
+}
+.legend-stab {
+  background-color: var(--m-stab);
+  background-image: radial-gradient(color-mix(in srgb, var(--m-stab) 40%, #fff) 1.2px, transparent 1.4px);
+  background-size: 5px 5px;
+}
+.legend-neutral { background: var(--m-muscle); }

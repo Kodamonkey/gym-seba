@@ -66,14 +66,33 @@ export function DayPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <PageHeader back="/" />
+      <PageHeader back="/" subtitle="Tu entrenamiento" />
       <p className="text-[13px] font-semibold uppercase tracking-wider text-muted">{weekdayName(weekday)}</p>
       <h1 className="mt-0.5 text-[28px] font-bold leading-tight tracking-tight">{day.name}</h1>
       <p className="mt-1 text-sm text-muted">
         {day.exercises.length} ejercicios · ~{dayMinutes(day)} min{adaptation ? ' · adaptación' : ''}
       </p>
 
-      <ol className="mt-4 flex-1 divide-y divide-line">
+      <section className="mt-4 rounded-2xl border border-line bg-surface p-4" aria-label="Distribución orientativa de la sesión">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Tu sesión · tiempos orientativos</p>
+        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm min-[380px]:grid-cols-2">
+          {[
+            ['Calentamiento', day.timeSplit.warmupMin],
+            ['Fuerza', day.timeSplit.strengthMin],
+            ['Cardio', day.timeSplit.cardioMin],
+            ['Cierre', day.timeSplit.cooldownMin],
+          ].map(([label, min]) => (
+            <div key={label} className="flex items-center justify-between gap-2">
+              <dt className="text-muted">{label}</dt>
+              <dd className="font-semibold tabular">{min} min</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+      {adaptation && <p className="mt-3 text-sm text-muted">Adaptación: hasta {template.adaptation.setsPerExercise} series de trabajo por ejercicio.</p>}
+      <p className="mt-2 text-sm text-muted">Toca un ejercicio para ver su técnica y demostración.</p>
+
+      <ol className="app-list mt-3 flex-1 divide-y divide-line">
         {day.exercises.map((ex, i) => {
           const v = variants[i];
           const p = effectivePrescription(ex, adaptation, template);
@@ -83,15 +102,16 @@ export function DayPage() {
               <button
                 type="button"
                 onClick={() => setTech(ex.variantId)}
-                className="flex min-h-16 w-full items-center gap-4 py-3.5 text-left active:opacity-60"
+                className="flex min-h-20 w-full items-center gap-3 px-3 py-3.5 text-left active:bg-surface-2"
                 aria-label={`${v?.name ?? 'Ejercicio'}: ver técnica`}
               >
-                <span className="w-5 text-[15px] font-semibold text-faint tabular">{i + 1}</span>
+                <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-surface-2 text-[13px] font-semibold text-muted tabular">{i + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[16px] font-medium leading-snug">{v?.name ?? '…'}</span>
                   <span className="mt-0.5 block text-[13px] text-muted tabular">
-                    {targetText(p, v?.measure)} · {ex.restSec} s{best ? ` · última ${setText(best)}` : ''}
+                    {targetText(p, v?.measure)} · {ex.restSec} s{best ? ` · último registro ${setText(best, best.unit)}` : ''}
                   </span>
+                  <span className="mt-1 block text-xs text-muted">RIR {p.rirMin}–{p.rirMax}</span>
                 </span>
                 <InfoIcon className="text-faint" />
               </button>
@@ -99,6 +119,11 @@ export function DayPage() {
           );
         })}
       </ol>
+      <p className="mt-3 text-xs text-muted">RIR = repeticiones que podrías hacer antes del fallo. La rutina y técnica siguen pendientes de revisión profesional.</p>
+      <details className="mt-3 rounded-2xl border border-line bg-surface px-4">
+        <summary className="flex min-h-12 items-center text-sm font-medium text-accent">Carga y esfuerzo</summary>
+        <p className="pb-4 text-sm text-muted">No hay un peso inicial calculado. Mantén la carga hasta completar todas las series en el tope del rango con técnica y RIR correctos. Considera después el menor incremento disponible. No aumentes con dolor, técnica deteriorada o una sesión incompleta. Las cargas de máquinas distintas no son directamente comparables.</p>
+      </details>
 
       <div className="sticky bottom-0 -mx-4 mt-4 bg-bg/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         {active && active.dayId !== day.id ? (

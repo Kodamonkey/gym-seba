@@ -54,8 +54,10 @@ export interface AdaptationInput {
   program: Pick<Program, 'startDate' | 'adaptationWeeks' | 'id'>;
   daysPerWeek: number;
   today: LocalDate;
-  /** Fechas locales de sesiones completadas o parciales del programa. */
+  /** Fechas locales de sesiones completadas del programa; las parciales no cumplen la adaptación. */
   completedDates: LocalDate[];
+  /** Actividad registrada, incluidas las sesiones parciales. Si se omite, usa `completedDates`. */
+  activityDates?: LocalDate[];
   decisions: ProgramDecision[];
 }
 
@@ -87,7 +89,7 @@ export function adaptationState(input: AdaptationInput): AdaptationState {
     };
   }
 
-  const sorted = [...input.completedDates].sort();
+  const sorted = [...(input.activityDates ?? input.completedDates)].sort();
   const last = sorted[sorted.length - 1];
   if (last && diffDays(last, input.today) >= 14) {
     const decidedAfterGap = input.decisions.some((d) => d.createdAt.slice(0, 10) > last);

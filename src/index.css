@@ -6,19 +6,19 @@
  */
 :root {
   color-scheme: light;
-  --bg: #ffffff;
+  --bg: #f6f8f5;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --surface-3: #e8e8eb;
-  --border: #e6e6e9;
-  --text: #0b0b0c;
-  --muted: #5f636b;
-  --faint: #8a8d94;
-  --accent: #0b0b0c;
+  --surface-2: #edf2ec;
+  --surface-3: #dce5dc;
+  --border: #dbe3db;
+  --text: #18271f;
+  --muted: #526258;
+  --faint: #5f6e63;
+  --accent: #20543d;
   --accent-ink: #ffffff;
   --danger: #c62828;
-  --warn: #9a6200;
-  --ok: #138a3e;
+  --warn: #935e00;
+  --ok: #21643d;
   --info: #1d5fd1;
   --focus: #2563eb;
   --chart: #138a3e;
@@ -83,6 +83,21 @@ body {
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Espacio al desplazarse con el encabezado fijo y el descanso visible. */
+html { scroll-padding-top: 5rem; scroll-padding-bottom: 9rem; }
+
+.training-hero {
+  background: radial-gradient(ellipse at top right, #397254, transparent 75%), var(--accent);
+  box-shadow: 0 8px 24px rgb(32 84 61 / 0.12);
+}
+
+.app-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--surface);
 }
 
 button,

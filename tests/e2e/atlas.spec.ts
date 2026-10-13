@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { exercise, humanPause, logSet, startDay } from './helpers';
 
 test('el inicio muestra los días de la rutina sin configuración inicial', async ({ page }) => {
@@ -64,7 +65,9 @@ test('los borradores no cuentan; terminar guarda como parcial y queda en el hist
   await expect(page.getByText('Se guardará como parcial.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Mi rutina' })).toBeVisible();
-  await expect(page.getByLabel('Hecho esta semana')).toBeVisible();
+  await expect(page.getByLabel('Parcial esta semana')).toBeVisible();
+  await expect(page.getByLabel('Hecho esta semana')).toHaveCount(0);
+  await expect(page.getByText('0/4 completas esta semana')).toBeVisible();
   await page.getByRole('link', { name: 'Ver todo' }).click();
   await page.getByRole('link', { name: /Tren superior A/ }).click();
   await expect(page.getByText('50 × 8')).toBeVisible();
@@ -90,7 +93,7 @@ test('cambiar un ejercicio actualiza su técnica y demostración', async ({ page
   await page.getByRole('button', { name: 'Press de pecho con mancuernas' }).click();
   await expect(page.getByRole('heading', { name: /Press de pecho con mancuernas/ })).toBeVisible();
   await page.getByRole('button', { name: 'Opciones de Press de pecho con mancuernas' }).click();
-  await page.getByRole('button', { name: 'Ver técnica' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Ver técnica', exact: true }).click();
   await expect(page.getByText(/Acostado en banco plano/)).toBeVisible();
   await expect(page.getByRole('img', { name: /Demostración: Press de pecho con mancuernas/ })).toBeVisible();
 });
@@ -132,6 +135,31 @@ test('exportar e importar el propio respaldo no duplica datos', async ({ page })
   const file = await (await download).path();
   await page.getByLabel('Archivo de respaldo').setInputFiles(file);
   await expect(page.getByText(/: 0 registros nuevos, \d+ iguales y 0 distintos/)).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Importar', exact: true }).click();
+  await expect(page.getByText('Importación completa: 0 registros.')).toBeVisible();
+  await page.goto('/sesion');
+  await expect(exercise(page).getByLabel('Carga serie 1', { exact: true })).toHaveValue('40');
+  await expect(exercise(page).getByRole('button', { name: 'Serie 1 hecha. Tocar para corregir' })).toHaveCount(1);
+});
+
+test('los CSV se descargan por separado con los registros reales', async ({ page }) => {
+  await startDay(page);
+  await logSet(page, 0, '42,5', '10');
+  await page.goto('/ajustes');
+  await page.getByText('Exportar para una hoja de cálculo', { exact: true }).click();
+  const setsDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar series (CSV)', exact: true }).click();
+  const setsFile = await (await setsDownload).path();
+  const sets = await readFile(setsFile!, 'utf8');
+  expect(sets).toContain('carga');
+  expect(sets).toContain('Press de pecho en máquina');
+  expect(sets).toContain('42.5');
+  const sessionsDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar sesiones (CSV)', exact: true }).click();
+  const sessionsFile = await (await sessionsDownload).path();
+  const sessions = await readFile(sessionsFile!, 'utf8');
+  expect(sessions).toContain('America/Santiago');
+  expect(sessions).toContain('Tren superior A');
 });
 
 test('se puede seguir registrando sin conexión tras preparar la app', async ({ page, context }) => {

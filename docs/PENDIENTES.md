@@ -1,6 +1,6 @@
 # Pendientes concretos
 
-Lo que **no** está hecho o no está verificado. Nada de esta lista se presenta como completo en la app.
+Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como completo en la app. Los números son estables porque `objetivos.json` los referencia; los resueltos quedan identificados.
 
 ## Validación profesional
 
@@ -24,14 +24,19 @@ Lo que **no** está hecho o no está verificado. Nada de esta lista se presenta 
 
 ## Plataforma
 
-12. Pruebas en teléfono físico (teclado, bloqueo, instalación PWA) y con lector de pantalla.
+12. Pruebas en teléfono físico (teclado, bloqueo, instalación PWA) y con lector de pantalla. La emulación en Edge cubre 320/375/390 px, controles táctiles, foco, borradores y descanso; no sustituye Android/iOS reales ni VoiceOver/TalkBack.
 13. Avisos de fin de descanso con el teléfono bloqueado o la pestaña suspendida: no garantizados (limitación del navegador; no se usan notificaciones push).
 14. Exportación `.ics` e integración con Google Calendar: no implementadas (mejora posterior; la segunda requiere autorización explícita).
 15. Sincronización entre dispositivos y cuentas: fuera del MVP. El respaldo JSON es el mecanismo de traslado.
-16. Despliegue: no se publicó en ningún hosting ni se creó un repositorio remoto (solo `git init` local, rama `feat/atlas-mvp`).
+16. Despliegue: el repositorio tiene un remoto `origin` en GitHub (rama `main`), pero no incluye workflow de despliegue ni hay un hosting confirmado para abrir la app en el celular.
 
 ## Interfaz simple (rediseño 2026-10-11)
 
 17. **Editar la rutina:** no hay editor en la app. Cambiar `src/data/seed/routine.ts` **no** modifica una instalación existente (la siembra solo añade lo que falta); hace falta una migración o un editor mínimo.
 18. Calendario, progreso/gráficos y mediciones corporales se retiraron de la interfaz; los datos siguen exportándose en el respaldo.
-19. Iconos de la PWA (`public/icon*.png`, `icon.svg`): conservan el diseño oscuro anterior; falta uno claro coherente con el nuevo tema.
+19. **Resuelto el 2026-10-12:** iconos PWA SVG/PNG y Apple Touch coherentes con el tema claro verde. `node scripts/gen-icons.mjs` los regenera desde el SVG propio; icono maskable dentro de la zona segura.
+
+## Límites detectados en la auditoría móvil (2026-10-12)
+
+20. **Resuelto el 2026-10-12:** la adaptación separa sesiones completas para su umbral y actividad real (completas o parciales) para detectar inactividad. Una parcial no se presenta como completa ni provoca por sí sola un aviso de inactividad; las decisiones previas se conservan.
+21. **Confirmaciones de progresión:** la interfaz mínima no registra RIR por serie, técnica confirmada ni dolor por ejercicio. Muestra el RIR objetivo y orientación conservadora; no inventa esas confirmaciones. Para cerrar la progresión automática habría que exponer esos datos y confirmar la máquina/incremento con Seba.

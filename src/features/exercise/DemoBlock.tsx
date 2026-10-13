@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { AnatomyPlayer, useRoleMap } from '../../anatomy/AnatomyPlayer';
 import { CLIPS } from '../../anatomy/clips';
-import { usePrefersReducedMotion } from '../../app/hooks';
+import { usePrefs, usePrefersReducedMotion } from '../../app/hooks';
 import type { ExerciseVariant } from '../../domain/types';
 import { MUSCLE_BY_ID } from '../../data/seed/muscles';
 
@@ -11,6 +11,7 @@ import { MUSCLE_BY_ID } from '../../data/seed/muscles';
  */
 export function DemoBlock({ variant, compact }: { variant: ExerciseVariant; compact?: boolean }) {
   const reduced = usePrefersReducedMotion();
+  const prefs = usePrefs();
   const regionsOf = useCallback((id: string) => MUSCLE_BY_ID.get(id)?.regions ?? [], []);
   const roles = useRoleMap(variant.muscles, regionsOf);
   const clip = variant.clipId ? CLIPS.get(variant.clipId) : undefined;
@@ -29,7 +30,7 @@ export function DemoBlock({ variant, compact }: { variant: ExerciseVariant; comp
         clip={clip}
         roles={roles}
         hasStabilizers={variant.muscles.some((m) => m.role === 'stabilizer')}
-        autoplay
+        autoplay={prefs?.autoplayDemos ?? false}
         reducedMotion={reduced}
         label={variant.name}
         {...(compact ? { compact } : {})}

@@ -1,6 +1,35 @@
 # Resultados de pruebas ejecutadas
 
-Ejecutadas el **11 de octubre de 2026** en Windows 11, Node 24.19, npm 11.17, Microsoft Edge 155 (vía Playwright 1.64, `channel: 'msedge'`). Solo se listan pruebas que realmente se ejecutaron.
+Última revisión: **12 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. La revisión anterior se conserva más abajo.
+
+## Auditoría móvil del 12 de octubre
+
+| Comando | Resultado |
+|---|---|
+| `git diff --check` | Sin errores de espacios ni conflictos. |
+| `npm run typecheck` | Sin errores. |
+| `npm test` | **17 archivos pasan, 1 omitido** (generador de docs). **155 pruebas pasan, 1 omitida.** |
+| `npm run e2e` | **20/20 pasan** en 2,4 minutos. Incluye build de producción y service worker correctos. |
+
+Regresiones nuevas verificadas:
+
+- **Registro móvil:** guardado con foco, al ocultar/salir y al desmontar; cola de revisiones; confirmación inmediata; toma de control y cambios externos; doble reapertura; unidad lb importada; cálculo del espacio visible con encabezado, teclado y descanso reales.
+- **Sustitución:** el total prescrito se conserva tras completar parte del ejercicio; se protegen lados incompletos, solo calentamientos y ejercicios sin series pendientes.
+- **Sugerencias:** kg/lb, cargas distintas por lado, cambio de modo unilateral sin copiar resultados incompatibles y progresión aceptada para ambas filas.
+- **Adaptación:** solo completas satisfacen el umbral; las parciales recientes evitan falsos avisos de inactividad; las decisiones ya registradas conservan su comportamiento.
+- **Respaldo:** rechazo de zonas horarias y estructuras incompletas; protección frente a reemplazo parcial, catálogo vacío, series huérfanas, dos programas activos y reemplazo durante una sesión activa. Un respaldo propio con planificación descartada y luego eliminada sigue siendo importable.
+
+Las E2E recorren Inicio/Día/Sesión/técnica/Ajustes a **320, 375 y 390 px**. Comprueban desbordamiento, controles principales de al menos 44 px, retorno del foco, guardado de borrador con foco, pausa/recarga/reanudación del descanso, importación completa sin duplicados, CSV independientes, offline y fin del calendario sin metas inventadas.
+
+Se inspeccionaron capturas en Edge de Inicio, Día, Sesión, técnica normal y ampliada, descanso y Ajustes. También un viewport de **390 × 390 px** simula el espacio reducido por teclado: el campo enfocado queda por encima del descanso y debajo del encabezado. No hubo errores de JavaScript en ese recorrido. Se comprobaron numéricamente los contrastes de texto principales de la paleta clara; no equivale a una auditoría formal de accesibilidad.
+
+La primera ejecución detectó dos expectativas anteriores incompatibles con la nueva UI (parciales como completas y selector de técnica ambiguo). Se actualizaron las expectativas. Otra ejecución detectó un error de precisión geométrica (`43.999992` px para un control CSS de 44 px); la prueba redondea a centésimas, sin reducir el objetivo táctil.
+
+No se modificaron clips ni variantes; no fue necesario regenerar los documentos de medios. Permanecen pendientes teléfono físico, lector de pantalla, rendimiento en gama baja y revisión profesional.
+
+## Verificación anterior del 11 de octubre
+
+Ejecutada en Windows 11, Node 24.19, npm 11.17, Microsoft Edge 155 (vía Playwright 1.64).
 
 ## Comprobaciones automáticas
 

@@ -78,6 +78,14 @@ export const TimerIcon = (p: IconProps) => (
   </svg>
 );
 
+export const PauseIcon = (p: IconProps) => (
+  <svg {...base(p)}><path d="M8 5v14M16 5v14" /></svg>
+);
+
+export const PlayIcon = (p: IconProps) => (
+  <svg {...base(p)}><path d="m8 5 11 7-11 7z" /></svg>
+);
+
 export const InfoIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="10" />

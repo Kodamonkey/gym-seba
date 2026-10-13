@@ -32,10 +32,10 @@ export function loadColumn(v: Pick<VariantSnapshot, 'loadConvention' | 'implemen
 }
 
 /** "40 × 12" (o "45 s"), con el lado si aplica. */
-export function setText(s: Pick<SetLog, 'load' | 'reps' | 'durationSec' | 'side'>): string {
+export function setText(s: Pick<SetLog, 'load' | 'reps' | 'durationSec' | 'side'>, unit?: LoadUnit): string {
   const work = s.reps !== null ? `${s.reps}` : s.durationSec !== null ? `${s.durationSec} s` : '—';
   const side = s.side === 'left' ? ' izq.' : s.side === 'right' ? ' der.' : '';
-  return s.load === null ? `${work}${side}` : `${formatDecimal(s.load)} × ${work}${side}`;
+  return s.load === null ? `${work}${side}` : `${formatDecimal(s.load)}${unit ? ` ${unit}` : ''} × ${work}${side}`;
 }
 
 /** Sugiere subir peso si en la última sesión todas las series llegaron al tope de repeticiones. */

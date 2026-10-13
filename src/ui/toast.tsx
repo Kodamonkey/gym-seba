@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {t.action && (
               <button
                 type="button"
-                className="min-h-10 rounded-full px-3 font-semibold underline-offset-2 active:bg-white/15"
+                className="min-h-11 rounded-full px-3 font-semibold underline-offset-2 active:bg-white/15"
                 onClick={async () => {
                   dismiss(t.id);
                   await t.action!.run();
@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {t.action.label}
               </button>
             )}
-            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full opacity-70 active:bg-white/15" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso">
+            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full opacity-70 active:bg-white/15" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso">
               <CloseIcon size={18} />
             </button>
           </div>

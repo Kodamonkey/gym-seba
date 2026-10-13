@@ -183,7 +183,7 @@ export function AnatomyPlayer({ clip, roles, hasStabilizers, autoplay = false, r
       >
         {playing ? '❚❚ Pausa' : '▶ Reproducir'}
       </button>
-      <button type="button" className="h-11 rounded-lg bg-surface-3 px-3" onClick={restart} aria-label="Reiniciar demostración">
+      <button type="button" className="h-11 min-w-11 rounded-lg bg-surface-3 px-3" onClick={restart} aria-label="Reiniciar demostración">
         ↺
       </button>
       <label className="flex items-center gap-1 text-sm text-muted">
@@ -252,7 +252,7 @@ export function AnatomyPlayer({ clip, roles, hasStabilizers, autoplay = false, r
               tRef.current = Number(e.target.value) / 1000;
               setT(tRef.current);
             }}
-            className="w-full accent-[var(--accent)]"
+            className="min-h-11 w-full accent-[var(--accent)]"
             aria-label="Posición dentro del movimiento"
           />
         </div>

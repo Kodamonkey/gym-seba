@@ -2,10 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState } from 'react';
 import { formatClock } from '../../domain/dates';
 import { ADJUST_STEP_MS, remainingMs } from '../../domain/timer';
-import { db } from '../../data/db';
-import { adjustRestTimer, clearRestTimer, finishRestTimer, skipRestTimer } from '../../data/timers';
+import { db, userMessage } from '../../data/db';
+import { adjustRestTimer, clearRestTimer, finishRestTimer, pauseRestTimer, resumeRestTimer, skipRestTimer } from '../../data/timers';
 import { useNow, usePrefs } from '../../app/hooks';
-import { TimerIcon } from '../../ui/icons';
+import { PauseIcon, PlayIcon, TimerIcon } from '../../ui/icons';
+import { useToast } from '../../ui/toast';
 
 /**
  * Descanso flotante. El restante se recalcula desde el estado guardado en IndexedDB, así que
@@ -15,6 +16,11 @@ import { TimerIcon } from '../../ui/icons';
 export function RestTimer({ sessionId, canEdit }: { sessionId: string; canEdit: boolean }) {
   const timer = useLiveQuery(() => db.restTimers.get('current'), []);
   const prefs = usePrefs();
+  const toast = useToast();
+  const run = async (action: () => Promise<unknown>) => {
+    try { await action(); }
+    catch (e) { toast({ message: userMessage(e), tone: 'error' }); }
+  };
   const mine = !!timer && timer.sessionId === sessionId;
   const running = mine && (timer.status === 'running' || timer.status === 'paused');
   const now = useNow(250, running);
@@ -31,7 +37,7 @@ export function RestTimer({ sessionId, canEdit }: { sessionId: string; canEdit: 
     setAnnounce('Descanso terminado.');
     if (prefs?.restVibration && 'vibrate' in navigator) navigator.vibrate?.([180, 80, 180]);
     if (prefs?.restSound) beep();
-    if (canEdit) void finishRestTimer();
+    if (canEdit) void run(finishRestTimer);
   }, [finishedNow, timer, prefs, canEdit]);
 
   useEffect(() => {
@@ -41,7 +47,7 @@ export function RestTimer({ sessionId, canEdit }: { sessionId: string; canEdit: 
   // Terminado: se retira solo a los pocos segundos.
   useEffect(() => {
     if (!done || !canEdit) return;
-    const id = setTimeout(() => void clearRestTimer(), 4000);
+    const id = setTimeout(() => void run(clearRestTimer), 4000);
     return () => clearTimeout(id);
   }, [done, canEdit, timer?.startedAt]);
 
@@ -57,35 +63,41 @@ export function RestTimer({ sessionId, canEdit }: { sessionId: string; canEdit: 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]" role="region" aria-label="Descanso">
       {live}
-      <div className={`anim-fade mx-auto max-w-xl overflow-hidden rounded-2xl shadow-2xl ${done ? 'bg-ok text-white' : 'bg-text text-bg'}`}>
-        <div className="flex items-center gap-2 py-1.5 pl-4 pr-1.5">
+      <p className="sr-only">{done ? 'Descanso terminado.' : `Tiempo restante: ${formatClock(remaining)}${timer.status === 'paused' ? '. En pausa.' : '.'}`}</p>
+      <div className={`anim-fade mx-auto max-w-xl overflow-hidden rounded-2xl shadow-2xl ${done ? 'bg-ok text-white' : 'bg-text text-white'}`}>
+        <div className="flex items-center gap-2 px-3 py-2">
           <TimerIcon className="flex-none opacity-70" />
           <span className="min-w-[4.25rem] text-[26px] font-bold tabular" aria-hidden>
             {done ? '0:00' : formatClock(remaining)}
           </span>
-          <span className="flex-1 truncate text-[13px] opacity-90">{done ? '¡A la siguiente!' : ''}</span>
+          <span className="min-w-0 flex-1 text-[13px] opacity-90">{done ? 'Descanso terminado' : timer.status === 'paused' ? 'En pausa' : 'Descanso'}</span>
           {!done ? (
-            <>
-              <button type="button" className={btn} disabled={!canEdit} onClick={() => adjustRestTimer(-ADJUST_STEP_MS)} aria-label="Restar 15 segundos">
-                −15
-              </button>
-              <button type="button" className={btn} disabled={!canEdit} onClick={() => adjustRestTimer(ADJUST_STEP_MS)} aria-label="Sumar 15 segundos">
-                +15
-              </button>
-              <button type="button" className={`${btn} bg-white/15 font-semibold`} disabled={!canEdit} onClick={() => skipRestTimer()}>
-                Saltar
-              </button>
-            </>
+            <button type="button" className={`${btn} bg-white/10`} disabled={!canEdit} onClick={() => run(timer.status === 'paused' ? resumeRestTimer : pauseRestTimer)} aria-label={timer.status === 'paused' ? 'Reanudar descanso' : 'Pausar descanso'}>
+              {timer.status === 'paused' ? <PlayIcon size={18} /> : <PauseIcon size={18} />}
+            </button>
           ) : (
-            <button type="button" className={btn} disabled={!canEdit} onClick={() => clearRestTimer()}>
+            <button type="button" className={btn} disabled={!canEdit} onClick={() => run(clearRestTimer)}>
               Cerrar
             </button>
           )}
         </div>
         {!done && (
-          <div className="h-1 bg-white/15" aria-hidden>
-            <div className="h-full bg-ok transition-[width] duration-200" style={{ width: `${pct}%` }} />
-          </div>
+          <>
+            <div className="flex items-center gap-2 border-t border-white/10 px-3 pb-2 pt-1">
+              <button type="button" className={`${btn} flex-1`} disabled={!canEdit} onClick={() => run(() => adjustRestTimer(-ADJUST_STEP_MS))} aria-label="Restar 15 segundos">
+                −15
+              </button>
+              <button type="button" className={`${btn} flex-1`} disabled={!canEdit} onClick={() => run(() => adjustRestTimer(ADJUST_STEP_MS))} aria-label="Sumar 15 segundos">
+                +15
+              </button>
+              <button type="button" className={`${btn} flex-1 bg-white/15 font-semibold`} disabled={!canEdit} onClick={() => run(skipRestTimer)}>
+                Saltar
+              </button>
+            </div>
+            <div className="h-1 bg-white/15" aria-hidden>
+              <div className="h-full bg-[#a9d2b4] transition-[width] duration-200" style={{ width: `${pct}%` }} />
+            </div>
+          </>
         )}
       </div>
     </div>

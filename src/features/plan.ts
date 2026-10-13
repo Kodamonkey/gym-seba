@@ -35,14 +35,14 @@ export function usePlan(today: string): PlanSnapshot | undefined {
       })
       .sort((a, b) => (a.sw.date < b.sw.date ? -1 : a.sw.date > b.sw.date ? 1 : 0));
     const decisions = await db.programDecisions.where('programId').equals(program.id).toArray();
+    const activity = sessions.filter((s) => s.programId === program.id && (s.status === 'completed' || s.status === 'partial'));
     const adaptation = template
       ? adaptationState({
           program,
           daysPerWeek: template.days.length,
           today,
-          completedDates: sessions
-            .filter((s) => s.programId === program.id && (s.status === 'completed' || s.status === 'partial'))
-            .map((s) => s.localDate),
+          completedDates: activity.filter((s) => s.status === 'completed').map((s) => s.localDate),
+          activityDates: activity.map((s) => s.localDate),
           decisions,
         })
       : null;

@@ -59,6 +59,44 @@ describe('adaptación', () => {
     const s = adaptationState({ program, daysPerWeek: 4, today: '2026-11-10', completedDates: done, decisions: [] });
     expect(s.pendingDecision).toBe(true);
   });
+
+  it('cuatro sesiones parciales no equivalen a cuatro sesiones completas', () => {
+    const s = adaptationState({
+      program,
+      daysPerWeek: 4,
+      today: '2026-10-27',
+      completedDates: [],
+      activityDates: ['2026-10-12', '2026-10-13', '2026-10-15', '2026-10-17'],
+      decisions: [],
+    });
+    expect(s).toMatchObject({ active: true, pendingDecision: true });
+    expect(s.reason).toContain('completaste 0 de 8');
+  });
+
+  it('una sesión parcial reciente evita un aviso falso de inactividad', () => {
+    const completedDates = ['2026-10-12', '2026-10-13', '2026-10-15', '2026-10-17'];
+    const s = adaptationState({
+      program,
+      daysPerWeek: 4,
+      today: '2026-11-02',
+      completedDates,
+      activityDates: [...completedDates, '2026-10-30'],
+      decisions: [],
+    });
+    expect(s).toMatchObject({ active: false, pendingDecision: false });
+  });
+
+  it('respeta terminar la adaptación aunque solo haya actividad parcial', () => {
+    const s = adaptationState({
+      program,
+      daysPerWeek: 4,
+      today: '2026-10-27',
+      completedDates: [],
+      activityDates: ['2026-10-26'],
+      decisions: [{ id: 'd', programId: 'p', kind: 'end-adaptation', detail: '', createdAt: '2026-10-26T12:00:00.000Z' }],
+    });
+    expect(s).toMatchObject({ active: false, pendingDecision: false });
+  });
 });
 
 describe('estados y cumplimiento', () => {

@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ExerciseVariant, SessionExercise, SetLog, WorkoutSession } from '../../domain/types';
+import { adviseProgression } from '../../domain/progression';
 import { db, userMessage } from '../../data/db';
 import { addSet, deleteSet, restoreSet, substituteVariant } from '../../data/sessions';
 import { CheckIcon, ChevronLeftIcon, InfoIcon, MinusIcon, MoreIcon, PlusIcon, SwapIcon } from '../../ui/icons';
@@ -41,12 +42,14 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
   const labels = useMemo(() => {
     const m = new Map<string, { label: string; workIndex: number | null }>();
     let n = 0;
+    let workRow = 0;
     for (const s of live) {
       if (s.kind !== 'work') m.set(s.id, { label: 'C', workIndex: null });
       else {
         const shared = perSideRows && s.side === 'right' && n > 0;
         if (!shared) n++;
-        m.set(s.id, { label: String(n), workIndex: n - 1 });
+        m.set(s.id, { label: String(n), workIndex: perSideRows ? workRow : n - 1 });
+        workRow++;
       }
     }
     return m;
@@ -55,9 +58,21 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
   const prevWork = sugg?.prev?.sets.filter((s) => s.kind === 'work') ?? [];
   const isTime = se.variant.measure === 'time';
   const showTop = !isTime && reachedTop(prevWork, se.prescribed.repMax);
+  const previous = sugg?.prev;
+  const advice = showTop && previous?.confirmed && prevWork.every((s) => s.unit === se.unit) ? adviseProgression({
+    prescribed: { ...se.prescribed, sets: Math.max(se.prescribed.sets, previous.sessionExercise.prescribed.sets) },
+    measure: se.variant.measure,
+    workSets: prevWork,
+    perSideRows,
+    techniqueConfirmed: previous.sessionExercise.techniqueConfirmed,
+    painReported: previous.sessionExercise.painReported,
+    sessionComplete: previous.session.status === 'completed',
+    minIncrement: null,
+    unit: se.unit,
+  }) : null;
 
   return (
-    <section className="border-b border-line py-5 last:border-b-0" aria-labelledby={`ex-${se.id}`}>
+    <section className="mt-3 rounded-2xl border border-line bg-surface p-4" aria-labelledby={`ex-${se.id}`}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <h2 id={`ex-${se.id}`} className="flex items-center gap-2 text-[17px] font-semibold leading-snug">
@@ -69,7 +84,7 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
             <span>{se.variant.name}</span>
           </h2>
           <p className="mt-0.5 text-[13px] text-muted tabular">
-            {targetText(se.prescribed, se.variant.measure)} · descanso {se.prescribed.restSec} s
+            {targetText(se.prescribed, se.variant.measure)} · descanso {se.prescribed.restSec} s · RIR {se.prescribed.rirMin}–{se.prescribed.rirMax}
           </p>
         </div>
         <IconButton label={`Opciones de ${se.variant.name}`} onClick={() => setMenu(true)} className="-mr-2 -mt-2 text-muted">
@@ -77,8 +92,11 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
         </IconButton>
       </div>
 
-      {prevWork.length > 0 && <p className="mt-2 text-[13px] text-muted tabular">Última vez: {prevWork.map(setText).join(' · ')}</p>}
-      {showTop && <p className="mt-1 text-[13px] font-medium text-ok">Llegaste al tope de repeticiones: prueba subir un poco el peso.</p>}
+      {prevWork.length > 0 && <p className="mt-2 text-[13px] text-muted tabular">Última vez: {prevWork.map((s) => setText(s, s.unit)).join(' · ')}{previous && !previous.confirmed ? ' · misma máquina por confirmar' : ''}</p>}
+      {advice && <p className="mt-2 rounded-xl bg-surface-2 px-3 py-2 text-[13px] text-muted">{advice.kind === 'needs-confirmation' ? 'Faltan datos para sugerir subir carga. Comprueba la técnica y el RIR con un entrenador antes de considerar un aumento.' : advice.message}</p>}
+      <button type="button" className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent" onClick={() => onTechnique(se.variantId)} aria-label={`Ver técnica de ${se.variant.name}`}>
+        <InfoIcon size={17} /> Ver técnica
+      </button>
 
       <div className="mt-3 grid grid-cols-[2rem_1fr_1fr_3rem] gap-2 pr-1 text-center text-[11px] font-semibold uppercase tracking-wider text-faint" aria-hidden>
         <span>Serie</span>
@@ -120,9 +138,10 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
 
 /** Sin historial, la serie propone lo de la serie hecha justo antes en esta sesión. */
 function fromPreviousRow(live: SetLog[], index: number): Suggestion | undefined {
+  const side = live[index]?.side;
   for (let i = index - 1; i >= 0; i--) {
     const s = live[i]!;
-    if (s.kind === 'work' && s.status === 'completed') return { load: s.load, reps: s.reps, durationSec: s.durationSec, source: 'previous', fromDate: '' };
+    if (s.kind === 'work' && s.status === 'completed' && (side == null || s.side === side)) return { load: s.load, reps: s.reps, durationSec: s.durationSec, source: 'previous', fromDate: '' };
   }
   return undefined;
 }

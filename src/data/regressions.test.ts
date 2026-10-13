@@ -10,6 +10,7 @@ import {
   finishSession,
   liveSetsOf,
   prEntries,
+  sessionCompleteness,
   setUnilateralLogging,
   substituteVariant,
   updateSet,
@@ -76,6 +77,76 @@ describe('sesiones', () => {
     const added = (await db.sessionExercises.get(a))!;
     expect(added.prescribed.sets).toBe(pallof.prescribed.sets - 1);
     expect((await exercisesOf(s.id)).filter((x) => x.variantId === 'v-pallof-hold')).toHaveLength(1);
+  });
+
+  it('sustituir tras una serie conserva el total y permite completar la sesión', async () => {
+    const s = await startScheduledWorkout(ctx.sws[0]!.id, TZ);
+    const original = (await exercisesOf(s.id))[0]!;
+    const before = await sessionCompleteness(s.id);
+    const first = (await liveSetsOf(original.id))[0]!;
+    await confirmSet(first.id, { load: 40, reps: 10 }, first.rev);
+
+    const addedId = await substituteVariant(original.id, 'v-db-bench-press');
+    expect((await db.sessionExercises.get(original.id))?.prescribed.sets).toBe(1);
+    expect((await sessionCompleteness(s.id)).expected).toBe(before.expected);
+    expect((await db.setLogs.get(first.id))?.load).toBe(40);
+    expect((await liveSetsOf(addedId)).every((set) => set.load === null)).toBe(true);
+
+    const drafts = (await db.setLogs.where('sessionId').equals(s.id).toArray()).filter((set) => set.status === 'draft');
+    for (const set of drafts) await confirmSet(set.id, { load: 10, reps: 10 }, set.rev);
+    expect(await sessionCompleteness(s.id)).toMatchObject({ done: before.expected, expected: before.expected, pendingDrafts: 0 });
+  });
+
+  it('sustituir tras un par completo permite completar la sesión con la alternativa', async () => {
+    const s = await startScheduledWorkout(ctx.sws[1]!.id, TZ);
+    const pallof = (await exercisesOf(s.id)).find((ex) => ex.variantId === 'v-pallof-press')!;
+    await setUnilateralLogging(pallof.id, 'per-side-rows');
+    const rows = await liveSetsOf(pallof.id);
+    for (const set of rows.slice(0, 2)) await confirmSet(set.id, { load: 10, reps: 10 }, set.rev);
+
+    await substituteVariant(pallof.id, 'v-pallof-hold');
+    expect((await db.sessionExercises.get(pallof.id))?.prescribed.sets).toBe(1);
+    const exercises = new Map((await exercisesOf(s.id)).map((ex) => [ex.id, ex]));
+    const drafts = (await db.setLogs.where('sessionId').equals(s.id).toArray()).filter((set) => set.status === 'draft');
+    for (const set of drafts) {
+      const values = exercises.get(set.sessionExerciseId)!.variant.measure === 'time' ? { load: 10, durationSec: 25 } : { load: 10, reps: 10 };
+      await confirmSet(set.id, values, set.rev);
+    }
+    const complete = await sessionCompleteness(s.id);
+    expect(complete.done).toBe(complete.expected);
+    expect(complete.pendingDrafts).toBe(0);
+  });
+
+  it.each([{ rows: [0] }, { rows: [0, 2] }])('no sustituye dejando un lado sin terminar ($rows)', async ({ rows: completedRows }) => {
+    const s = await startScheduledWorkout(ctx.sws[1]!.id, TZ);
+    const pallof = (await exercisesOf(s.id)).find((ex) => ex.variantId === 'v-pallof-press')!;
+    await setUnilateralLogging(pallof.id, 'per-side-rows');
+    const rows = await liveSetsOf(pallof.id);
+    for (const index of completedRows) {
+      const set = rows[index]!;
+      await confirmSet(set.id, { load: 10, reps: 10 }, set.rev);
+    }
+    await expect(substituteVariant(pallof.id, 'v-pallof-hold')).rejects.toThrow(/ambos lados|desmarca/);
+    expect(await liveSetsOf(pallof.id)).toHaveLength(4);
+    expect((await exercisesOf(s.id)).some((ex) => ex.variantId === 'v-pallof-hold')).toBe(false);
+  });
+
+  it('no sustituye solo calentamientos confirmados sin ofrecer corregirlos', async () => {
+    const s = await startScheduledWorkout(ctx.sws[0]!.id, TZ);
+    const original = (await exercisesOf(s.id))[0]!;
+    const warmup = await addSet(original.id, 'warmup');
+    await confirmSet(warmup.id, { load: 10, reps: 10 }, warmup.rev);
+    await expect(substituteVariant(original.id, 'v-db-bench-press')).rejects.toThrow(/Desmarca.*calentamientos/);
+    expect((await db.setLogs.get(warmup.id))?.status).toBe('completed');
+    expect((await db.sessionExercises.get(original.id))?.variantId).toBe('v-chest-press-machine');
+  });
+
+  it('no añade una serie extra al sustituir un ejercicio ya completo', async () => {
+    const s = await startScheduledWorkout(ctx.sws[0]!.id, TZ);
+    const original = (await exercisesOf(s.id))[0]!;
+    for (const set of await liveSetsOf(original.id)) await confirmSet(set.id, { load: 40, reps: 10 }, set.rev);
+    await expect(substituteVariant(original.id, 'v-db-bench-press')).rejects.toThrow(/ya están completas/);
+    expect((await exercisesOf(s.id)).some((ex) => ex.variantId === 'v-db-bench-press')).toBe(false);
   });
 });
 

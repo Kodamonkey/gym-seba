@@ -33,19 +33,28 @@ export function SessionPage() {
   useEffect(() => {
     if (!prefs?.keepAwake || !session || !('wakeLock' in navigator)) return;
     let sentinel: WakeLockSentinel | null = null;
-    const request = () =>
-      navigator.wakeLock
-        .request('screen')
-        .then((s) => (sentinel = s))
-        .catch(() => undefined);
+    let disposed = false;
+    let requesting = false;
+    const request = async () => {
+      if (disposed || requesting || document.visibilityState !== 'visible' || (sentinel && !sentinel.released)) return;
+      requesting = true;
+      try {
+        const next = await navigator.wakeLock.request('screen');
+        if (disposed) await next.release();
+        else sentinel = next;
+      } catch {
+        // El navegador puede negar el permiso o liberar la pantalla por batería baja.
+      } finally { requesting = false; }
+    };
     void request();
     const onVis = () => document.visibilityState === 'visible' && void request();
     document.addEventListener('visibilitychange', onVis);
     return () => {
+      disposed = true;
       document.removeEventListener('visibilitychange', onVis);
       void sentinel?.release();
     };
-  }, [prefs?.keepAwake, session]);
+  }, [prefs?.keepAwake, session?.id]);
 
   const byExercise = useMemo(() => {
     const m = new Map<string, SetLog[]>();
@@ -91,6 +100,10 @@ export function SessionPage() {
           </Button>
         }
       />
+
+      <p className="mb-3 mt-3 text-[13px] text-muted">
+        {session.adaptation ? 'Adaptación · ' : ''}RIR = repeticiones antes del fallo. Completa tus series con control.
+      </p>
 
       {lock.state === 'viewer' && (
         <div className="mt-2 flex items-center gap-3 rounded-2xl bg-warn/10 p-3 text-sm" role="alert">

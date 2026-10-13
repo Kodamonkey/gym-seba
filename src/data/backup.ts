@@ -40,6 +40,39 @@ const id = z.string().min(1).max(200);
 const instant = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'instante inválido');
 const localDate = z.string().refine(isLocalDate, 'fecha local inválida');
 const nullableInstant = instant.nullable();
+const timestamps = { createdAt: instant, updatedAt: instant };
+const timeZone = z.string().refine((value) => {
+  try {
+    new Intl.DateTimeFormat('es-CL', { timeZone: value }).format(0);
+    return value.trim().length > 0;
+  } catch {
+    return false;
+  }
+}, 'zona horaria inválida');
+const equipmentKind = z.enum(['machine', 'cable', 'dumbbell', 'barbell', 'smith', 'bodyweight']);
+const loadConvention = z.enum(['per-implement', 'total-external', 'plates-added', 'machine-stack', 'nominal', 'none']);
+const prescription = {
+  sets: z.number().int().positive(),
+  repMin: z.number().int().nonnegative(),
+  repMax: z.number().int().nonnegative(),
+  durationMin: z.number().int().positive().optional(),
+  durationMax: z.number().int().positive().optional(),
+  repsMode: z.enum(['total', 'per-side']),
+  restSec: z.number().int().nonnegative(),
+  rirMin: z.number().min(0).max(LIMITS.maxRir),
+  rirMax: z.number().min(0).max(LIMITS.maxRir),
+};
+const variantSnapshot = {
+  name: z.string(),
+  exerciseId: id,
+  equipmentKind,
+  config: z.record(z.string(), z.string()),
+  laterality: z.enum(['bilateral', 'unilateral']),
+  implements: z.union([z.literal(1), z.literal(2)]),
+  loadConvention,
+  measure: z.enum(['reps', 'time']),
+  requiresEquipmentInstance: z.boolean(),
+};
 
 const setLogSchema = z.looseObject({
   id,
@@ -63,24 +96,43 @@ const setLogSchema = z.looseObject({
 
 const sessionSchema = z.looseObject({
   id,
+  programId: id.nullable(),
+  scheduledWorkoutId: id.nullable(),
+  dayId: id.nullable(),
   localDate,
-  timeZone: z.string().min(1),
+  timeZone,
   startedAt: instant,
   endedAt: nullableInstant,
   status: z.enum(['active', 'completed', 'partial', 'discarded']),
   pauses: z.array(z.looseObject({ start: instant, end: nullableInstant })),
   title: z.string(),
+  programWeek: z.number().int().nullable(),
+  adaptation: z.boolean(),
+  notes: z.string(),
+  ownerTabId: id.nullable(),
   rev: z.number().int().nonnegative(),
+  ...timestamps,
 });
 
 const sessionExerciseSchema = z.looseObject({
   id,
   sessionId: id,
   order: z.number().int(),
+  slotId: id.nullable(),
   variantId: id,
-  variant: z.looseObject({ name: z.string(), loadConvention: z.string(), measure: z.enum(['reps', 'time']), laterality: z.enum(['bilateral', 'unilateral']) }),
+  variant: z.looseObject(variantSnapshot),
+  equipmentInstanceId: id.nullable(),
   unit: z.enum(['kg', 'lb']),
-  prescribed: z.looseObject({ sets: z.number().int().positive(), repMin: z.number().int(), repMax: z.number().int(), restSec: z.number().int().nonnegative() }),
+  baseResistance: z.number().finite().nonnegative().nullable(),
+  prescribed: z.looseObject(prescription),
+  substitutedFromVariantId: id.nullable(),
+  unilateralLogging: z.enum(['per-side-rows', 'one-row-per-side-reps']),
+  restBetweenSides: z.boolean(),
+  techniqueConfirmed: z.boolean().nullable(),
+  painReported: z.boolean(),
+  notes: z.string(),
+  rev: z.number().int().nonnegative(),
+  ...timestamps,
 });
 
 const measurementSchema = z.looseObject({
@@ -88,11 +140,22 @@ const measurementSchema = z.looseObject({
   date: localDate,
   weightKg: z.number().positive().finite().nullable(),
   waistCm: z.number().positive().finite().nullable(),
+  notes: z.string(),
+  ...timestamps,
 });
 
-const cardioSchema = z.looseObject({ id, date: localDate, durationMin: z.number().positive().finite(), distanceKm: z.number().nonnegative().finite().nullable() });
-const scheduledSchema = z.looseObject({ id, programId: id, dayId: id, date: localDate, sessionId: id.nullable() });
-const programSchema = z.looseObject({ id, templateId: id, startDate: localDate, weeks: z.number().int().positive(), adaptationWeeks: z.number().int().nonnegative() });
+const cardioSchema = z.looseObject({
+  id, date: localDate, sessionId: id.nullable(), modality: z.string(), durationMin: z.number().positive().finite(),
+  distanceKm: z.number().nonnegative().finite().nullable(), rpe: z.number().min(0).max(10).nullable(), notes: z.string(), ...timestamps,
+});
+const scheduledSchema = z.looseObject({
+  id, programId: id, dayId: id, date: localDate, sessionId: id.nullable(), movedFrom: localDate.nullable(),
+  origin: z.enum(['rule', 'manual']), skippedConfirmed: z.boolean(), ...timestamps,
+});
+const programSchema = z.looseObject({
+  id, templateId: id, name: z.string(), startDate: localDate, weeks: z.number().int().positive(), adaptationWeeks: z.number().int().nonnegative(),
+  timeZone, weekdays: z.record(z.string(), z.number().int().min(1).max(7)), status: z.enum(['active', 'archived']), ...timestamps,
+});
 const mediaSchema = z.looseObject({
   id,
   variantId: id,
@@ -110,29 +173,48 @@ const profileSchema = z.looseObject({
   name: z.string(),
   heightCm: nonNegNullable,
   weightKg: nonNegNullable,
-  timeZone: z.string().min(1),
+  timeZone,
   onboardedAt: nullableInstant,
+  experience: z.string(),
+  capabilities: z.string(),
+  goal: z.string(),
+  gymName: z.string(),
+  ...timestamps,
 });
 const prefsSchema = z.looseObject({
   id: z.literal('prefs'),
+  appName: z.string(),
   theme: z.enum(['dark', 'light', 'system']),
   accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   animations: z.enum(['system', 'on', 'off']),
   backupReminderDays: z.number().int().nonnegative(),
+  autoplayDemos: z.boolean(),
+  showStabilizers: z.boolean(),
+  autoStartRest: z.boolean(),
+  restSound: z.boolean(),
+  restVibration: z.boolean(),
+  keepAwake: z.boolean(),
+  defaultRirMin: z.number().min(0).max(LIMITS.maxRir),
+  defaultRirMax: z.number().min(0).max(LIMITS.maxRir),
+  updatedAt: instant,
 });
-const exerciseSchema = z.looseObject({ id, name: z.string().min(1), archived: z.boolean() });
+const exerciseSchema = z.looseObject({ id, name: z.string().min(1), archived: z.boolean(), ...timestamps });
 const variantSchema = z.looseObject({
   id,
-  exerciseId: id,
+  ...variantSnapshot,
   name: z.string().min(1),
-  equipmentKind: z.enum(['machine', 'cable', 'dumbbell', 'barbell', 'smith', 'bodyweight']),
-  laterality: z.enum(['bilateral', 'unilateral']),
-  implements: z.union([z.literal(1), z.literal(2)]),
-  loadConvention: z.enum(['per-implement', 'total-external', 'plates-added', 'machine-stack', 'nominal', 'none']),
-  measure: z.enum(['reps', 'time']),
+  loadNote: z.string().optional(),
   muscles: z.array(z.looseObject({ muscleId: z.string(), role: z.enum(['target', 'synergist', 'stabilizer']) })),
-  technique: z.looseObject({ setup: z.string(), execution: z.string(), avoid: z.array(z.string()) }),
+  musclesReviewStatus: z.enum(['unreviewed', 'reviewed']),
+  technique: z.looseObject({
+    setup: z.string(), execution: z.string(), avoid: z.array(z.string()),
+    more: z.looseObject({ breathing: z.string().optional(), adjustments: z.string().optional(), details: z.string().optional() }),
+    authoredBy: z.enum(['atlas', 'user']), reviewStatus: z.enum(['unreviewed', 'reviewed']),
+  }),
   clipId: z.string().nullable(),
+  archived: z.boolean(),
+  custom: z.boolean(),
+  ...timestamps,
 });
 const equipmentSchema = z.looseObject({
   id,
@@ -142,40 +224,56 @@ const equipmentSchema = z.looseObject({
   unit,
   minIncrement: z.number().finite().positive().nullable(),
   declaredBaseResistance: nonNegNullable,
+  kind: equipmentKind,
+  location: z.string(),
+  archived: z.boolean(),
+  ...timestamps,
 });
-const equipmentNoteSchema = z.looseObject({ id, equipmentId: id, text: z.string() });
+const equipmentNoteSchema = z.looseObject({ id, equipmentId: id, text: z.string(), ...timestamps });
 const prescribedSchema = z.looseObject({
   id,
   variantId: id,
-  sets: z.number().int().positive(),
-  repMin: z.number().int().nonnegative(),
-  repMax: z.number().int().nonnegative(),
-  restSec: z.number().int().nonnegative(),
+  ...prescription,
   alternativeVariantIds: z.array(z.string()),
+  notes: z.string(),
+  noDirectAlternativeNote: z.string().optional(),
 });
 const templateSchema = z.looseObject({
   id,
   name: z.string(),
   weeksTotal: z.number().int().positive(),
   version: z.number().int().positive(),
-  days: z.array(z.looseObject({ id, name: z.string(), weekday: z.number().int().min(1).max(7), exercises: z.array(prescribedSchema) })),
+  adaptation: z.looseObject({ weeks: z.number().int().nonnegative(), setsPerExercise: z.number().int().positive() }),
+  days: z.array(z.looseObject({
+    id, name: z.string(), weekday: z.number().int().min(1).max(7), exercises: z.array(prescribedSchema),
+    timeSplit: z.looseObject({ warmupMin: z.number().finite().nonnegative(), strengthMin: z.number().finite().nonnegative(), cardioMin: z.number().finite().nonnegative(), cooldownMin: z.number().finite().nonnegative() }),
+  })),
+  archived: z.boolean(),
+  ...timestamps,
 });
-const versionSchema = z.looseObject({ id, templateId: id, version: z.number().int().positive(), snapshot: templateSchema });
-const programDecisionSchema = z.looseObject({ id, programId: id, kind: z.string(), createdAt: instant });
+const versionSchema = z.looseObject({ id, templateId: id, version: z.number().int().positive(), snapshot: templateSchema, createdAt: instant });
+const programDecisionSchema = z.looseObject({ id, programId: id, kind: z.enum(['keep-adaptation', 'end-adaptation', 'reschedule', 'other']), detail: z.string(), createdAt: instant });
 const progressionDecisionSchema = z.looseObject({
   id,
   comparisonKey: z.string(),
+  variantId: id,
+  sessionId: id,
   decision: z.enum(['accepted', 'postponed', 'adjusted']),
+  fromLoad: nonNegNullable,
   toLoad: nonNegNullable,
   unit,
+  createdAt: instant,
 });
 const restTimerSchema = z.looseObject({
   id: z.literal('current'),
   sessionId: id,
+  setId: id.nullable(),
   startedAt: z.number().finite(),
   durationMs: z.number().finite().nonnegative(),
   pausedTotalMs: z.number().finite().nonnegative(),
+  pausedAt: z.number().finite().nullable(),
   status: z.enum(['running', 'paused', 'finished', 'skipped']),
+  updatedAt: z.number().finite(),
 });
 
 /** Un esquema por cada tabla exportable: nada se importa validado solo por `id`. */
@@ -314,13 +412,26 @@ export async function previewImport(data: BackupFile, policy: ImportPolicy = 'me
 }
 
 export async function applyImport(data: BackupFile, policy: ImportPolicy): Promise<{ written: number }> {
+  // También protege a quienes llaman esta función fuera de la pantalla de importación.
+  const parsed = parseBackup(JSON.stringify(data));
+  if (!parsed.ok) throw new Error(`La importación no es válida: ${parsed.errors[0] ?? 'formato desconocido'}`);
+  const incoming = parsed.data;
+  if (policy === 'replace-all') {
+    const missing = USER_TABLES.filter((t) => incoming.tables[t] === undefined);
+    if (missing.length || !incoming.tables.profile?.length || !incoming.tables.prefs?.length || !incoming.tables.routineTemplates?.length) {
+      throw new Error('La importación no se aplicó: el respaldo está incompleto. Para reemplazar todo, exporta un respaldo completo de ATLAS.');
+    }
+  }
   let written = 0;
   await db.transaction('rw', USER_TABLES.map((t) => db.table(t)), async () => {
+    if (policy !== 'merge-skip' && await db.sessions.where('status').equals('active').count() > 0) {
+      throw new Error('La importación requiere terminar o descartar el entrenamiento en curso antes de reemplazar datos.');
+    }
     if (policy === 'replace-all') {
       for (const t of USER_TABLES) await db.table(t).clear();
     }
     for (const t of USER_TABLES) {
-      const rows = data.tables[t] ?? [];
+      const rows = incoming.tables[t] ?? [];
       if (rows.length === 0) continue;
       if (policy === 'merge-skip') {
         const existing = await db.table(t).bulkGet(rows.map((r) => r.id as string));
@@ -337,14 +448,74 @@ export async function applyImport(data: BackupFile, policy: ImportPolicy): Promi
     if (active > 1) {
       throw new Error('La importación dejaría dos sesiones en curso. Finaliza o descarta la sesión actual antes de importar.');
     }
+    await validateImportedRelations(policy);
   });
   return { written };
+}
+
+/** Comprueba los vínculos resultantes dentro de la misma transacción, antes de confirmarla. */
+async function validateImportedRelations(policy: ImportPolicy): Promise<void> {
+  const sessions = new Map((await db.sessions.toArray()).map((s) => [s.id, s]));
+  const exercises = new Map((await db.sessionExercises.toArray()).map((se) => [se.id, se]));
+  for (const se of exercises.values()) {
+    if (!sessions.has(se.sessionId)) throw new Error('La importación contiene un ejercicio sin su sesión.');
+  }
+  for (const set of await db.setLogs.toArray()) {
+    const se = exercises.get(set.sessionExerciseId);
+    if (!sessions.has(set.sessionId) || !se || se.sessionId !== set.sessionId) {
+      throw new Error('La importación contiene una serie sin su sesión o con un ejercicio de otra sesión.');
+    }
+  }
+  const programs = new Map((await db.programs.toArray()).map((p) => [p.id, p]));
+  const templates = new Map((await db.routineTemplates.toArray()).map((t) => [t.id, t]));
+  const variants = new Map((await db.variants.toArray()).map((v) => [v.id, v]));
+  const catalogExercises = new Set((await db.exercises.toCollection().primaryKeys()).map(String));
+  for (const template of templates.values()) {
+    for (const day of template.days) {
+      for (const slot of day.exercises) {
+        if ([slot.variantId, ...slot.alternativeVariantIds].some((variantId) => !variants.has(variantId))) {
+          throw new Error('La importación contiene una rutina sin sus variantes de ejercicio.');
+        }
+      }
+    }
+  }
+  for (const variant of variants.values()) {
+    if (!catalogExercises.has(variant.exerciseId)) throw new Error('La importación contiene una variante sin su ejercicio del catálogo.');
+  }
+  const activePrograms = [...programs.values()].filter((p) => p.status === 'active');
+  if (activePrograms.length > 1) {
+    throw new Error('La importación dejaría dos programas activos. Para trasladar el programa de otro dispositivo, termina el entrenamiento en curso, exporta un respaldo actual y elige Reemplazar todo.');
+  }
+  if (policy === 'replace-all' && activePrograms.length !== 1) {
+    throw new Error('La importación debe conservar un solo programa activo.');
+  }
+  for (const program of programs.values()) {
+    const template = templates.get(program.templateId);
+    if (!template) throw new Error('La importación contiene un programa sin su rutina.');
+    if (program.status === 'active' && (template.archived || template.days.length === 0 || template.days.some((day) => day.exercises.length === 0 || program.weekdays[day.id] === undefined))) {
+      throw new Error('La importación contiene un programa activo sin días de entrenamiento utilizables.');
+    }
+  }
+  const scheduled = new Set((await db.scheduledWorkouts.toCollection().primaryKeys()).map(String));
+  for (const s of sessions.values()) {
+    // Descartar libera la planificación; luego se puede borrar sin perder la copia histórica.
+    if ((s.programId && !programs.has(s.programId)) || (s.status !== 'discarded' && s.scheduledWorkoutId && !scheduled.has(s.scheduledWorkoutId))) {
+      throw new Error('La importación contiene una sesión sin su programa o planificación.');
+    }
+  }
+  for (const sw of await db.scheduledWorkouts.toArray()) {
+    if (!programs.has(sw.programId) || (sw.sessionId && !sessions.has(sw.sessionId))) {
+      throw new Error('La importación contiene una planificación sin su programa o sesión.');
+    }
+  }
 }
 
 /* ---------- CSV ---------- */
 
 export async function exportCsv(): Promise<{ sessions: string; sets: string }> {
-  const [sessions, ses, sets] = await Promise.all([db.sessions.toArray(), db.sessionExercises.toArray(), db.setLogs.toArray()]);
+  const [sessions, ses, sets] = await db.transaction('r', [db.sessions, db.sessionExercises, db.setLogs], () =>
+    Promise.all([db.sessions.toArray(), db.sessionExercises.toArray(), db.setLogs.toArray()]),
+  );
   const now = Date.now();
   const sessionRows = sessions
     .sort((a, b) => (a.startedAt < b.startedAt ? -1 : 1))

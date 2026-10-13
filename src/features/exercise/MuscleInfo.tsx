@@ -82,7 +82,7 @@ export function TechniqueInfo({ variant }: { variant: ExerciseVariant }) {
         <strong>Evita:</strong> {t.avoid.join(' ')}
       </p>
       {hasMore && (
-        <button type="button" className="self-start py-2 text-accent underline" aria-expanded={more} onClick={() => setMore((x) => !x)}>
+        <button type="button" className="min-h-11 self-start py-2 text-accent underline" aria-expanded={more} onClick={() => setMore((x) => !x)}>
           {more ? 'Ver menos' : 'Ver más'}
         </button>
       )}

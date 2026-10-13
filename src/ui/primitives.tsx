@@ -26,7 +26,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { variant = 'secondary', size = 'md', busy, className = '', children, disabled, ...rest },
   ref,
 ) {
-  const sizeCls = size === 'lg' ? 'min-h-14 px-6 text-[17px]' : size === 'sm' ? 'min-h-10 px-3.5 text-sm' : 'min-h-12 px-5';
+  const sizeCls = size === 'lg' ? 'min-h-14 px-6 text-[17px]' : size === 'sm' ? 'min-h-11 px-3.5 text-sm' : 'min-h-12 px-5';
   return (
     <button
       ref={ref}
@@ -77,7 +77,7 @@ export function PageHeader({
   progress?: number;
 }) {
   return (
-    <header className="sticky top-0 z-20 -mx-4 mb-2 flex min-h-14 items-center gap-1 bg-bg/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur">
+    <header className="sticky top-0 z-20 -mx-4 mb-3 flex min-h-16 items-center gap-1 border-b border-line bg-bg/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur">
       {back ? (
         <Link to={back} aria-label="Volver" className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full active:bg-surface-2">
           <ChevronLeftIcon size={24} />
@@ -186,11 +186,11 @@ export function Select({
 export function Toggle({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
   const id = useId();
   return (
-    <div className="flex min-h-14 items-center justify-between gap-4 py-2">
-      <label htmlFor={id} className="flex flex-col">
+    <label htmlFor={id} className="flex min-h-14 items-center justify-between gap-4 py-2">
+      <span className="flex flex-col">
         <span className="text-[15px]">{label}</span>
         {hint && <span className="text-xs text-muted">{hint}</span>}
-      </label>
+      </span>
       <input
         id={id}
         type="checkbox"
@@ -199,7 +199,7 @@ export function Toggle({ label, checked, onChange, hint }: { label: string; chec
         onChange={(e) => onChange(e.target.checked)}
         className="relative h-7 w-12 flex-none cursor-pointer appearance-none rounded-full bg-surface-3 transition-colors before:absolute before:left-0.5 before:top-0.5 before:h-6 before:w-6 before:rounded-full before:bg-white before:shadow before:transition-transform checked:bg-ok checked:before:translate-x-5"
       />
-    </div>
+    </label>
   );
 }
 
@@ -244,7 +244,7 @@ export function Dialog({
     >
       {open && (
         <div className="flex max-h-[88dvh] flex-col pb-[env(safe-area-inset-bottom)]">
-          <header className="flex items-center justify-between gap-2 px-5 pb-1 pt-4">
+          <header className="flex shrink-0 items-center justify-between gap-2 px-5 pb-1 pt-4">
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
@@ -252,8 +252,8 @@ export function Dialog({
               <CloseIcon />
             </IconButton>
           </header>
-          <div className="overflow-y-auto px-5 pb-4 pt-1">{children}</div>
-          {footer && <footer className="flex flex-col gap-2 px-5 pb-5">{footer}</footer>}
+          <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pb-4 pt-1">{children}</div>
+          {footer && <footer className="flex shrink-0 flex-col gap-2 px-5 pb-5">{footer}</footer>}
         </div>
       )}
     </dialog>

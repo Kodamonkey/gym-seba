@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { userMessage } from '../../data/db';
 import { discardSession } from '../../data/sessions';
 import { sessionSummary } from '../../data/overview';
 import { Button, Dialog, Loading, PageHeader } from '../../ui/primitives';
@@ -14,6 +15,7 @@ export function SessionView() {
   const navigate = useNavigate();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (summary === undefined) return <Loading />;
   if (!summary || summary.session.status === 'discarded' || summary.session.status === 'active') {
@@ -72,10 +74,15 @@ export function SessionView() {
             <Button
               size="lg"
               variant="destructive"
+              busy={deleting}
               onClick={async () => {
-                await discardSession(session.id);
-                toast({ message: 'Entrenamiento eliminado del historial.' });
-                navigate('/historial', { replace: true });
+                setDeleting(true);
+                try {
+                  await discardSession(session.id);
+                  toast({ message: 'Entrenamiento eliminado del historial.' });
+                  navigate('/historial', { replace: true });
+                } catch (e) { toast({ message: userMessage(e), tone: 'error' }); }
+                finally { setDeleting(false); }
               }}
             >
               Sí, eliminar

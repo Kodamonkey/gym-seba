@@ -165,12 +165,14 @@ export async function endAdaptation(program: Program): Promise<void> {
 
 export async function adaptationFor(program: Program, template: RoutineTemplate, today: LocalDate): Promise<AdaptationState> {
   const sessions = await db.sessions.where('status').anyOf('completed', 'partial').toArray();
+  const activity = sessions.filter((s) => s.programId === program.id);
   const decisions = await db.programDecisions.where('programId').equals(program.id).toArray();
   return adaptationState({
     program,
     daysPerWeek: template.days.length,
     today,
-    completedDates: sessions.filter((s) => s.programId === program.id).map((s) => s.localDate),
+    completedDates: activity.filter((s) => s.status === 'completed').map((s) => s.localDate),
+    activityDates: activity.map((s) => s.localDate),
     decisions,
   });
 }

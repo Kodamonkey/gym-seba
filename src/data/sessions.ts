@@ -367,6 +367,7 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
     const se = await db.sessionExercises.get(seId);
     const v = await db.variants.get(newVariantId);
     if (!se || !v) throw new ConflictError('El ejercicio o la variante ya no existen.');
+    if (se.variantId === v.id) return se.id;
     const sets = (await db.setLogs.where('sessionExerciseId').equals(seId).toArray()).filter((s) => s.deletedAt === null);
     const completed = sets.filter((s) => s.status === 'completed');
     const now = nowIso();
@@ -398,9 +399,23 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
     // Idempotencia: un segundo toque (u otra pestaña) no añade otra alternativa igual.
     const existing = siblings.find((s) => s.substitutedFromVariantId === se.variantId && s.variantId === v.id);
     if (existing) return existing.id;
+    const completedWork = completed.filter((s) => s.kind === 'work');
+    if (completedWork.length === 0) {
+      throw new Error('Desmarca los calentamientos confirmados antes de cambiar de ejercicio. Después puedes volver a registrarlos.');
+    }
     const rowsPerSet = se.variant.laterality === 'unilateral' && se.unilateralLogging === 'per-side-rows' ? 2 : 1;
-    const doneSets = Math.floor(completed.filter((s) => s.kind === 'work').length / rowsPerSet);
-    const remaining = Math.max(1, se.prescribed.sets - doneSets);
+    if (rowsPerSet === 2) {
+      const left = completedWork.filter((s) => s.side === 'left').length;
+      const right = completedWork.filter((s) => s.side === 'right').length;
+      if (left !== right || left + right !== completedWork.length) {
+        throw new Error('Termina ambos lados o desmarca el lado hecho antes de cambiar de ejercicio.');
+      }
+    }
+    const doneSets = completedWork.length / rowsPerSet;
+    const remaining = se.prescribed.sets - doneSets;
+    if (remaining <= 0) throw new Error('Las series de este ejercicio ya están completas. No quedan series por sustituir.');
+    // Las series se reparten entre la variante original y la alternativa; no se añade volumen.
+    await db.sessionExercises.put({ ...se, prescribed: { ...se.prescribed, sets: doneSets }, rev: se.rev + 1, updatedAt: now });
     for (const s of siblings) {
       if (s.order > se.order) await db.sessionExercises.update(s.id, { order: s.order + 1 });
     }

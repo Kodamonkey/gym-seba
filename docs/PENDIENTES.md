@@ -6,7 +6,7 @@ Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como
 
 1. **Revisión biomecánica de las 39 animaciones** (posturas, trayectorias, ángulos de escorzo) por un profesional. Todas figuran con `technicalReviewStatus: pending`.
 2. **Revisión de textos de técnica y roles musculares** (objetivo/participa/estabiliza) por variante. Hoy son `unreviewed`, redactados por ATLAS a partir de conocimiento general.
-3. **Revisión de la rutina** por un entrenador: es la configuración acordada para la app, no una prescripción.
+3. **Revisión práctica de la rutina v2** por un entrenador: evidencia y decisiones de programación en `EVIDENCIA_RUTINA.md` y `RUTINA_SEBA.md`. Basarla en literatura no equivale a validar la ejecución o prescribir clínicamente a Seba.
 
 ## Demostraciones
 
@@ -14,12 +14,12 @@ Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como
 5. Representación 2D: los movimientos fuera del plano se muestran con escorzo y extremidades translúcidas; no hay rotación libre ni 3D (segunda etapa opcional del encargo).
 6. Equipos dibujados de forma genérica: la máquina real de tu sede puede diferir (posición de agarres, pivotes, si es de pila o de discos).
 7. No se incorporaron medios de terceros (decisión "sin pagos"). El reproductor de vídeo se retiró de la interfaz en el rediseño minimalista; la tabla `media` sigue en el esquema si algún día se consiguen licencias.
-8. "Otra máquina equivalente" para la extensión de cuádriceps no está definida (y ya no hay editor de variantes en la app).
+8. **Alternativa de aislamiento pendiente:** la v2 ofrece goblet cuando falta extensión de cuádriceps y la rotula como otro movimiento, no como aislamiento equivalente. Una máquina distinta de extensión debe identificarse antes de comparar cargas; no hay editor de variantes en la interfaz.
 
 ## Datos del usuario por confirmar
 
-9. Inventario real de la sede: todos los equipos están "por verificar" (la interfaz ya no lo muestra; siempre es el mismo gimnasio).
-10. Incrementos mínimos y resistencias base de cada máquina: desconocidos. La pista "prueba subir un poco el peso" no da una cifra.
+9. Inventario real de la sede: `EQUIPOS_VESPUCIO.md` verifica fuentes oficiales que anuncian peso libre, peso integrado y cardio; no hay listado público individual. Seba cree haber visto los equipos básicos, sin confirmar modelos, agarres ni incrementos. Se mantienen "por verificar". La sesión ofrece alternativas, pero no afirma disponibilidad.
+10. Incrementos mínimos y resistencias base de cada máquina: desconocidos. La orientación conserva la carga y solo permite considerar el menor incremento disponible al cumplir series, técnica y RIR; no inventa una cifra.
 11. Sin máquina identificada, los récords no se celebran (comparabilidad no confirmada). La interfaz simple no muestra récords.
 
 ## Plataforma
@@ -32,7 +32,7 @@ Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como
 
 ## Interfaz simple (rediseño 2026-10-11)
 
-17. **Editar la rutina:** no hay editor en la app. Cambiar `src/data/seed/routine.ts` **no** modifica una instalación existente (la siembra solo añade lo que falta); hace falta una migración o un editor mínimo.
+17. **Editar la rutina:** no hay editor en la app. Cambiar el seed no basta. La transición v1→v2 actualiza solo la plantilla original intacta, difiere con una sesión activa y protege personalizaciones/importaciones. No resuelve la edición general sin código; una futura actualización necesita otra transición explícita.
 18. Calendario, progreso/gráficos y mediciones corporales se retiraron de la interfaz; los datos siguen exportándose en el respaldo.
 19. **Resuelto el 2026-10-12:** iconos PWA SVG/PNG y Apple Touch coherentes con el tema claro verde. `node scripts/gen-icons.mjs` los regenera desde el SVG propio; icono maskable dentro de la zona segura.
 

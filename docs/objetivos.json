@@ -1,18 +1,21 @@
 {
   "version": 1,
-  "actualizado": "2026-10-12",
+  "actualizado": "2026-10-13",
   "como_usar": "Fuente única de los objetivos de Seba y su estado. Al terminar trabajo que mueva un objetivo, actualiza su 'estado', 'evidencia' y la fecha 'actualizado'. Estados de la app: hecho | parcial | pendiente. Objetivos personales: en_curso | logrado | pausado. 'pendientes' cita los números de docs/PENDIENTES.md.",
   "fuentes": [
     "docs/PROMPT_MAESTRO.md (especificación original, 2026-10-11)",
     "Pedido de rediseño minimalista en chat (2026-10-11)",
     "Pedido de registrar objetivos para otros agentes en chat (2026-10-12)",
-    "Pedido de auditoría completa, alineación con objetivos y mejora móvil de UI/UX en chat (2026-10-12)"
+    "Pedido de auditoría completa, alineación con objetivos y mejora móvil de UI/UX en chat (2026-10-12)",
+    "Pedido de rutina basada en literatura y equipos de Vespucio, con alternativas si falta una máquina (2026-10-12–13); edad 25 años y ninguna restricción informadas por Seba"
   ],
   "usuario": {
     "nombre": "Seba",
     "estatura_cm": 172,
     "peso_inicial_kg": 82,
     "experiencia": "principiante",
+    "edad_anos_informada": 25,
+    "restricciones_informadas": "Seba refiere ninguna restricción en chat. No equivale a evaluación clínica.",
     "capacidades_informadas": ["correr", "flexiones"],
     "gimnasio": "Smart Fit Mallplaza Vespucio, Chile; siempre el mismo",
     "zona_horaria": "America/Santiago",
@@ -37,8 +40,10 @@
     {
       "id": "P3",
       "objetivo": "Completar el programa inicial de 8 semanas.",
-      "notas": "Semanas 1–2 de adaptación con dos series de trabajo por ejercicio; desde la 3, las series indicadas. RIR orientativo 2–3. Rutina completa en src/data/seed/routine.ts.",
-      "estado": "en_curso"
+      "notas": "Rutina v2: semanas 1–2 de adaptación con hasta dos series; después, dos o tres según ficha cuando corresponda salir de adaptación. RIR orientativo 2–3. Descansos principales 120 s. Las ocho semanas son un bloque inicial, no un plazo prometido para cambiar el físico.",
+      "estado": "en_curso",
+      "evidencia": "Plan documentado en docs/RUTINA_SEBA.md y docs/EVIDENCIA_RUTINA.md; src/data/seed/routine.ts versión 2. No implica sesiones realizadas ni resultados personales logrados.",
+      "actualizado": "2026-10-13"
     },
     {
       "id": "P4",
@@ -58,23 +63,23 @@
       "id": "A1",
       "objetivo": "App mínima, simple y clara (tema claro) para el celular: ver los días, la rutina y registrar series con pocos toques.",
       "estado": "hecho",
-      "evidencia": "Flujo Inicio → Día → Sesión conservado; tema claro verde, tarjetas legibles, controles de al menos 44 px, técnica directa, reparto de 60 min y RIR visibles. Iconos PWA propios coherentes. tests/e2e/mobile.spec.ts cubre 320/375/390 px; docs/AUDITORIA_MOVIL.md.",
-      "actualizado": "2026-10-12",
+      "evidencia": "Flujo Inicio → Día → Sesión conservado. Técnica y Cambiar a un toque; cada ejercicio v2 muestra alternativas identificadas. Guía breve de calentamiento/cardio y RIR; E2E móvil 320/375/390 px. docs/AUDITORIA_MOVIL.md y docs/RUTINA_SEBA.md.",
+      "actualizado": "2026-10-13",
       "pendientes": [12]
     },
     {
       "id": "A2",
       "objetivo": "Registro de series rápido, persistente y recuperable (recargar o suspender no pierde datos; sin duplicados).",
       "estado": "hecho",
-      "evidencia": "SetRow guarda borradores al escribir y al ocultar/salir; cola serializada y conflictos entre pestañas probados. Sustitución conserva el total prescrito. Adaptación separa completas de actividad reciente, sin alterar decisiones previas. SetRow.test.tsx, regressions.test.ts, adaptation.test.ts y E2E de recuperación. Un cierre forzado antes del commit IndexedDB no está garantizado.",
-      "actualizado": "2026-10-12"
+      "evidencia": "Guardado automático, revisiones y recuperación probados. Sustituciones conservan series hechas y adaptan registro por lado/unidad, sin transferir cargas o sugerencias antiguas. Rutina v2 actualiza solo plantilla original intacta y sin sesión activa; preserva historial, fechas y decisiones. Pruebas de routine-upgrade, sustitución y E2E. Un cierre forzado antes del commit IndexedDB no está garantizado.",
+      "actualizado": "2026-10-13"
     },
     {
       "id": "A3",
       "objetivo": "Demostración anatómica por ejercicio: persona + equipo + movimiento + músculos resaltados sobre el mismo cuerpo.",
       "estado": "parcial",
-      "evidencia": "39 clips SVG propios en src/anatomy; docs/COVERAGE_MATRIX.md. Técnica a un toque desde la sesión, controles táctiles y reproducción según preferencia (sin autoplay por defecto); reduced motion probado. Animaciones, técnica y músculos conservan pending/unreviewed.",
-      "actualizado": "2026-10-12",
+      "evidencia": "39 clips SVG propios cubren principales y alternativas de v2; docs/COVERAGE_MATRIX.md regenerado. Cambiar actualiza variante, técnica y demostración. Animaciones, técnica y músculos conservan pending/unreviewed.",
+      "actualizado": "2026-10-13",
       "pendientes": [1, 2, 4, 5, 6]
     },
     {
@@ -89,15 +94,16 @@
       "id": "A5",
       "objetivo": "Seguimiento de cargas, récords (PR) y progresión.",
       "estado": "parcial",
-      "evidencia": "La interfaz usa adviseProgression con datos reales y evita aumentos con sesión parcial, dolor, técnica/RIR insuficientes o equipo no confirmado. Registro previo muestra unidad; sugerencias convierten kg/lb y respetan lados. No hay formulario de RIR/técnica/dolor, récords ni gráficos en la interfaz simple.",
-      "actualizado": "2026-10-12",
+      "evidencia": "La interfaz usa adviseProgression con datos reales y no aumenta sin condiciones completas. Sugerencias kg/lb y lados, aisladas por variante, equipo, revisión y unidad; no se arrastran al sustituir. Rutina documenta doble progresión. Faltan formularios RIR/técnica/dolor, récords y gráficos.",
+      "actualizado": "2026-10-13",
       "pendientes": [10, 11, 18, 21]
     },
     {
       "id": "A6",
       "objetivo": "Editar la rutina sin tocar código.",
       "estado": "pendiente",
-      "evidencia": "No hay editor en la interfaz; cambiar el seed no actualiza una instalación existente.",
+      "evidencia": "No hay editor en la interfaz. La actualización v1→v2 conserva sesiones y solo migra la plantilla original intacta; protege plantillas personalizadas/importadas. Esto no habilita editar la rutina sin código.",
+      "actualizado": "2026-10-13",
       "pendientes": [17]
     },
     {
@@ -112,8 +118,8 @@
       "id": "A8",
       "objetivo": "Respaldo e importación de datos propios en JSON; exportación de sesiones y series en CSV.",
       "estado": "hecho",
-      "evidencia": "Ajustes permite JSON y descargas CSV individuales. Importación valida estructura, catálogo y vínculos, rechaza reemplazos incompletos y bloquea reemplazos durante una sesión activa; transacción sin cambios parciales. Fechas de respaldo en Santiago. backup.test.ts y E2E; docs/BACKUP.md.",
-      "actualizado": "2026-10-12"
+      "evidencia": "JSON/CSV reales, validación transaccional y reemplazos protegidos. Versiones v1/v2 viajan en JSON; procedencia importada protegida y reversión con respaldo previo probada. Fechas Santiago. backup.test.ts, routine-upgrade.test.ts y E2E; docs/BACKUP.md.",
+      "actualizado": "2026-10-13"
     },
     {
       "id": "A9",

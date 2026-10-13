@@ -4,13 +4,14 @@ import { db, nowIso } from './db';
 import { EXERCISES, VARIANTS } from './seed/catalog';
 import { EQUIPMENT } from './seed/equipment';
 import { ROUTINE_TEMPLATE } from './seed/routine';
+import { upgradeRoutine } from './routine-upgrade';
 
 /**
  * Siembra del catálogo y la rutina inicial. No crea historial, sesiones, PR ni mediciones.
  * Es idempotente: solo añade elementos que faltan y nunca sobrescribe ediciones del usuario.
  */
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 export function defaultProfile(): UserProfile {
   const now = nowIso();
@@ -73,9 +74,9 @@ export async function ensureSeeded(): Promise<void> {
       if (!(await db.routineTemplates.get(ROUTINE_TEMPLATE.id))) {
         await db.routineTemplates.add(ROUTINE_TEMPLATE);
         await db.routineVersions.add({
-          id: `${ROUTINE_TEMPLATE.id}@1`,
+          id: `${ROUTINE_TEMPLATE.id}@${ROUTINE_TEMPLATE.version}`,
           templateId: ROUTINE_TEMPLATE.id,
-          version: 1,
+          version: ROUTINE_TEMPLATE.version,
           snapshot: ROUTINE_TEMPLATE,
           createdAt: nowIso(),
         });
@@ -83,4 +84,5 @@ export async function ensureSeeded(): Promise<void> {
       await db.meta.put({ key: 'seedVersion', value: SEED_VERSION });
     },
   );
+  await upgradeRoutine();
 }

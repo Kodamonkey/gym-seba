@@ -112,6 +112,7 @@ export function DayPage() {
                     {targetText(p, v?.measure)} · {ex.restSec} s{best ? ` · último registro ${setText(best, best.unit)}` : ''}
                   </span>
                   <span className="mt-1 block text-xs text-muted">RIR {p.rirMin}–{p.rirMax}</span>
+                  <span className="mt-1 block text-xs font-medium text-accent">{ex.alternativeVariantIds.length} alternativa{ex.alternativeVariantIds.length === 1 ? '' : 's'} al entrenar</span>
                 </span>
                 <InfoIcon className="text-faint" />
               </button>
@@ -123,6 +124,15 @@ export function DayPage() {
       <details className="mt-3 rounded-2xl border border-line bg-surface px-4">
         <summary className="flex min-h-12 items-center text-sm font-medium text-accent">Carga y esfuerzo</summary>
         <p className="pb-4 text-sm text-muted">No hay un peso inicial calculado. Mantén la carga hasta completar todas las series en el tope del rango con técnica y RIR correctos. Considera después el menor incremento disponible. No aumentes con dolor, técnica deteriorada o una sesión incompleta. Las cargas de máquinas distintas no son directamente comparables.</p>
+      </details>
+      <details className="mt-3 rounded-2xl border border-line bg-surface px-4">
+        <summary className="flex min-h-12 items-center text-sm font-medium text-accent">Calentamiento, cardio y alternativas</summary>
+        <div className="space-y-3 pb-4 text-sm text-muted">
+          <p>Antes de la fuerza, muévete suave y practica el primer ejercicio con series ligeras de aproximación. No cuentan como series de trabajo. Pide ayuda con los ajustes de la máquina al comenzar.</p>
+          <p>Después de la fuerza, haz unos {day.timeSplit.cardioMin} minutos de caminadora, bicicleta o elíptica según disponibilidad. Usa una intensidad que permita conversar, pero no cantar. Estos bloques son un inicio; aumenta gradualmente tu actividad semanal.</p>
+          <p>Si falta un equipo o está ocupado, toca Cambiar en la sesión. Algunas opciones usan otro movimiento: revisa su técnica y empieza con una carga propia. Los equipos específicos de la sede siguen por verificar.</p>
+          <p>Los descansos son un punto de partida. Si falta recuperación, amplíalos; no aceleres las repeticiones para cerrar la hora exacta.</p>
+        </div>
       </details>
 
       <div className="sticky bottom-0 -mx-4 mt-4 bg-bg/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">

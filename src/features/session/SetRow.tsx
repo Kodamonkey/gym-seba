@@ -229,7 +229,8 @@ export function SetRow({ set, se, suggestion, canEdit, label }: Props) {
     }
   }
 
-  const repsLabel = isTime ? 'Segundos' : se.prescribed.repsMode === 'per-side' && set.side === null ? 'Repeticiones por lado' : 'Repeticiones';
+  const perSide = se.prescribed.repsMode === 'per-side' && set.side === null;
+  const repsLabel = isTime ? (perSide ? 'Segundos por lado' : 'Segundos') : perSide ? 'Repeticiones por lado' : 'Repeticiones';
 
   return (
     <li>

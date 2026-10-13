@@ -6,6 +6,10 @@ import { sessionActiveMs, totalPausedMs } from '../domain/timer';
 import { SCHEMA_VERSION } from '../domain/types';
 import { LIMITS } from '../domain/validation';
 import { db, nowIso, USER_TABLES, type UserTableName } from './db';
+import { IMPORTED_ROUTINES_KEY } from './routine-ownership';
+import { canonical } from './canonical';
+
+export { canonical } from './canonical';
 
 /**
  * Respaldo e importación de datos propios. El archivo nunca incluye claves, tokens ni
@@ -368,20 +372,6 @@ export interface ImportPreview {
   totals: TablePreview;
 }
 
-/** Serialización canónica (claves ordenadas en todos los niveles) para comparar registros. */
-export function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const o = value as Record<string, unknown>;
-    return `{${Object.keys(o)
-      .filter((k) => o[k] !== undefined)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canonical(o[k])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value) ?? 'null';
-}
-
 export async function previewImport(data: BackupFile, policy: ImportPolicy = 'merge-skip'): Promise<ImportPreview> {
   const out: ImportPreview['tables'] = {};
   const totals: TablePreview = { incoming: 0, added: 0, identical: 0, conflicts: 0, removed: 0 };
@@ -423,13 +413,15 @@ export async function applyImport(data: BackupFile, policy: ImportPolicy): Promi
     }
   }
   let written = 0;
-  await db.transaction('rw', USER_TABLES.map((t) => db.table(t)), async () => {
+  await db.transaction('rw', [...USER_TABLES.map((t) => db.table(t)), db.meta], async () => {
     if (policy !== 'merge-skip' && await db.sessions.where('status').equals('active').count() > 0) {
       throw new Error('La importación requiere terminar o descartar el entrenamiento en curso antes de reemplazar datos.');
     }
     if (policy === 'replace-all') {
       for (const t of USER_TABLES) await db.table(t).clear();
     }
+    const previousImports = policy === 'replace-all' ? [] : (await db.meta.get(IMPORTED_ROUTINES_KEY))?.value;
+    const importedRoutineIds = new Set<string>(Array.isArray(previousImports) ? previousImports.filter((value): value is string => typeof value === 'string') : []);
     for (const t of USER_TABLES) {
       const rows = incoming.tables[t] ?? [];
       if (rows.length === 0) continue;
@@ -437,9 +429,11 @@ export async function applyImport(data: BackupFile, policy: ImportPolicy): Promi
         const existing = await db.table(t).bulkGet(rows.map((r) => r.id as string));
         const fresh = rows.filter((_, i) => !existing[i]);
         if (fresh.length) await db.table(t).bulkAdd(fresh);
+        if (t === 'routineTemplates') fresh.forEach((row) => importedRoutineIds.add(String(row.id)));
         written += fresh.length;
       } else {
         await db.table(t).bulkPut(rows);
+        if (t === 'routineTemplates') rows.forEach((row) => importedRoutineIds.add(String(row.id)));
         written += rows.length;
       }
     }
@@ -449,6 +443,7 @@ export async function applyImport(data: BackupFile, policy: ImportPolicy): Promi
       throw new Error('La importación dejaría dos sesiones en curso. Finaliza o descarta la sesión actual antes de importar.');
     }
     await validateImportedRelations(policy);
+    await db.meta.put({ key: IMPORTED_ROUTINES_KEY, value: [...importedRoutineIds] });
   });
   return { written };
 }

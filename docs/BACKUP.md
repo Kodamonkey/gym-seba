@@ -33,6 +33,14 @@ Los nombres de archivo y la fecha del último respaldo usan la zona del perfil (
 
 La interfaz actual no incluye un botón para borrar toda la base. Eliminar un entrenamiento del historial exige confirmar y lo conserva marcado como descartado en el respaldo.
 
+## Versiones de rutina
+
+La rutina v2 actualiza la plantilla original v1 únicamente si sigue intacta y no hay sesión activa. Guarda ambas versiones en `routineVersions`, que se exporta en JSON. Conserva sesiones, calendario y decisiones.
+
+Para volver a la rutina anterior, importa un respaldo JSON previo con una política que reemplace la plantilla, después de finalizar el entrenamiento y conservar los datos actuales. La importación marca las plantillas realmente incorporadas para que una actualización automática no las sustituya; la marca se guarda en la misma transacción. Una fusión que no escribe la plantilla no cambia su procedencia.
+
+Las importaciones antiguas idénticas a v1, hechas antes de registrar esa procedencia, son indistinguibles de la plantilla inicial. Se mantiene el historial y se conserva v1 al actualizarlas. La protección no modifica el formato del respaldo ni exige borrar la base.
+
 ## Limitaciones conocidas
 
 - El navegador puede negar el almacenamiento persistente; depende de su política (uso, instalación como app, espacio).

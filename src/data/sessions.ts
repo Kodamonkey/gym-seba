@@ -5,6 +5,7 @@ import { isEligibleSet } from '../domain/pr';
 import type {
   ExerciseVariant,
   ID,
+  LoadUnit,
   Prescription,
   SessionExercise,
   SetKind,
@@ -59,7 +60,7 @@ export interface StartSessionInput {
   now?: Date;
 }
 
-function draftSet(sessionId: ID, seId: ID, order: number, kind: SetKind, side: Side | null, now: string): SetLog {
+function draftSet(sessionId: ID, seId: ID, order: number, kind: SetKind, side: Side | null, now: string, unit: LoadUnit): SetLog {
   return {
     id: uid(),
     sessionId,
@@ -68,7 +69,7 @@ function draftSet(sessionId: ID, seId: ID, order: number, kind: SetKind, side: S
     kind,
     side,
     load: null,
-    unit: 'kg',
+    unit,
     reps: null,
     durationSec: null,
     rir: null,
@@ -117,7 +118,7 @@ async function buildSessionExercise(
     createdAt: now,
     updatedAt: now,
   };
-  const sets = Array.from({ length: input.prescription.sets }, (_, i) => draftSet(sessionId, se.id, i + 1, 'work', null, now));
+  const sets = Array.from({ length: input.prescription.sets }, (_, i) => draftSet(sessionId, se.id, i + 1, 'work', null, now, se.unit));
   return { se, sets };
 }
 
@@ -265,7 +266,7 @@ export async function addSet(sessionExerciseId: ID, kind: SetKind = 'work', copy
     const all = await db.setLogs.where('sessionExerciseId').equals(sessionExerciseId).toArray();
     const order = all.reduce((m, s) => Math.max(m, s.order), 0) + 1;
     const now = nowIso();
-    const base = draftSet(se.sessionId, se.id, order, kind, null, now);
+    const base = draftSet(se.sessionId, se.id, order, kind, null, now, se.unit);
     if (copyFrom) {
       const src = await db.setLogs.get(copyFrom);
       if (src) {
@@ -347,10 +348,10 @@ export async function setUnilateralLogging(seId: ID, mode: SessionExercise['unil
     let order = 1;
     for (let i = 0; i < count; i++) {
       if (mode === 'per-side-rows') {
-        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', 'left', now));
-        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', 'right', now));
+        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', 'left', now, se.unit));
+        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', 'right', now, se.unit));
       } else {
-        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', null, now));
+        fresh.push(draftSet(se.sessionId, se.id, order++, 'work', null, now, se.unit));
       }
     }
     await db.setLogs.bulkAdd(fresh);
@@ -368,6 +369,18 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
     const v = await db.variants.get(newVariantId);
     if (!se || !v) throw new ConflictError('El ejercicio o la variante ya no existen.');
     if (se.variantId === v.id) return se.id;
+    const { durationMin, durationMax } = se.prescribed;
+    if (v.measure === 'time' && (
+      durationMin === undefined || durationMax === undefined ||
+      !Number.isFinite(durationMin) || !Number.isFinite(durationMax) ||
+      durationMin <= 0 || durationMax < durationMin
+    )) {
+      throw new Error('La alternativa es por tiempo, pero no tiene un rango de segundos planificado válido. Elige una alternativa por repeticiones.');
+    }
+    const prescribed: Prescription = {
+      ...se.prescribed,
+      repsMode: v.laterality === 'unilateral' ? 'per-side' : 'total',
+    };
     const sets = (await db.setLogs.where('sessionExerciseId').equals(seId).toArray()).filter((s) => s.deletedAt === null);
     const completed = sets.filter((s) => s.status === 'completed');
     const now = nowIso();
@@ -382,6 +395,7 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
         equipmentInstanceId: eq?.id ?? null,
         unit: eq?.unit ?? 'kg',
         baseResistance: eq?.declaredBaseResistance ?? null,
+        prescribed,
         substitutedFromVariantId: se.substitutedFromVariantId ?? se.variantId,
         unilateralLogging: 'one-row-per-side-reps',
         techniqueConfirmed: null,
@@ -390,7 +404,7 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
       });
       await db.setLogs.bulkDelete(sets.map((s) => s.id));
       await db.setLogs.bulkAdd(
-        Array.from({ length: se.prescribed.sets }, (_, i) => draftSet(se.sessionId, se.id, i + 1, 'work', null, now)),
+        Array.from({ length: prescribed.sets }, (_, i) => draftSet(se.sessionId, se.id, i + 1, 'work', null, now, eq?.unit ?? 'kg')),
       );
       return se.id;
     }
@@ -428,7 +442,7 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
       equipmentInstanceId: eq?.id ?? null,
       unit: eq?.unit ?? 'kg',
       baseResistance: eq?.declaredBaseResistance ?? null,
-      prescribed: { ...se.prescribed, sets: remaining },
+      prescribed: { ...prescribed, sets: remaining },
       substitutedFromVariantId: se.variantId,
       unilateralLogging: 'one-row-per-side-reps',
       techniqueConfirmed: null,
@@ -441,7 +455,7 @@ export async function substituteVariant(seId: ID, newVariantId: ID): Promise<ID>
     await db.sessionExercises.add(added);
     // Borradores pendientes de la variante original se retiran (no se transfieren cargas).
     await db.setLogs.bulkDelete(sets.filter((s) => s.status === 'draft').map((s) => s.id));
-    await db.setLogs.bulkAdd(Array.from({ length: remaining }, (_, i) => draftSet(se.sessionId, added.id, i + 1, 'work', null, now)));
+    await db.setLogs.bulkAdd(Array.from({ length: remaining }, (_, i) => draftSet(se.sessionId, added.id, i + 1, 'work', null, now, added.unit)));
     return added.id;
   });
 }

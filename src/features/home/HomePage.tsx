@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useActiveSession, useTimeZone, useToday } from '../../app/hooks';
 import { addDays, formatLocalDate, isoWeekday, startOfWeek, weekdayName } from '../../domain/dates';
 import type { RoutineDay, WorkoutSession } from '../../domain/types';
 import { userMessage } from '../../data/db';
 import { startDay } from '../../data/overview';
+import { upgradeRoutine } from '../../data/routine-upgrade';
 import { endAdaptation, keepAdaptation } from '../../data/program';
 import { ActiveSessionExistsError, sessionCompleteness } from '../../data/sessions';
 import { CheckIcon, ChevronRightIcon, SettingsIcon } from '../../ui/icons';
@@ -26,6 +27,9 @@ export function HomePage() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const progress = useLiveQuery(() => (active ? sessionCompleteness(active.id) : undefined), [active?.id]);
+  useEffect(() => {
+    if (active === null) void upgradeRoutine().catch((error) => toast({ message: userMessage(error), tone: 'error' }));
+  }, [active, toast]);
 
   if (!plan || active === undefined) return <Loading />;
   const { program, template } = plan;

@@ -20,7 +20,7 @@ export function dayMinutes(day: RoutineDay): number {
 
 /** "3 × 8–12" o "2 × 20–30 s", con "por lado" si corresponde. */
 export function targetText(p: Prescription, measure: VariantSnapshot['measure'] = 'reps'): string {
-  if (measure === 'time') return `${p.sets} × ${p.durationMin ?? '?'}–${p.durationMax ?? '?'} s`;
+  if (measure === 'time') return `${p.sets} × ${p.durationMin ?? '?'}–${p.durationMax ?? '?'} s${p.repsMode === 'per-side' ? ' por lado' : ''}`;
   const reps = p.repMin === p.repMax ? `${p.repMin}` : `${p.repMin}–${p.repMax}`;
   return `${p.sets} × ${reps}${p.repsMode === 'per-side' ? ' por lado' : ''}`;
 }

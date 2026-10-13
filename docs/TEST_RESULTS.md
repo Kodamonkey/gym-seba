@@ -1,6 +1,23 @@
 # Resultados de pruebas ejecutadas
 
-Última revisión: **12 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. La revisión anterior se conserva más abajo.
+Última revisión: **13 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. Las revisiones anteriores se conservan más abajo.
+
+## Rutina v2 y alternativas, 13 de octubre
+
+| Comando | Resultado |
+|---|---|
+| `npm run typecheck` | Sin errores. |
+| `npm test` | **21 archivos pasan, 1 omitido**; **187 pruebas pasan, 1 omitida** (generador de documentos). |
+| `npm run docs:media` | Generación correcta de cobertura y manifiesto; el manifiesto conserva su contenido porque no se añadieron clips. |
+| `npm run e2e` | **23/23 pasan** en 2,8 minutos. Incluye build de producción y service worker. |
+
+- **Rutina:** cuatro días, seis ejercicios diarios, 14 series por día desde la fase completa y 12 en adaptación; alternativas identificadas, rangos/lateralidad y descansos coherentes. No asigna cargas iniciales.
+- **Transición v1→v2:** instalación nueva, plantilla original intacta, personalizaciones, importaciones, conflictos de versiones, sesión activa diferida, reintento, historial/calendario/decisiones intactos, concurrencia, fallo transaccional y reversión con respaldo previo. Solo una importación antigua idéntica a v1, sin procedencia registrada, es indistinguible del seed.
+- **Sustitución:** modos bilateral/unilateral, variante por tiempo, rechazo de duración no planificada, series restantes e historial confirmado conservados. Borradores en la unidad real del equipo.
+- **Sugerencias:** cinco pruebas UI con respuestas demoradas cubren variante, equipo, revisión, unidad y cambio rápido; la variante nueva no recibe cargas de un contexto anterior.
+- **E2E nuevas:** extensión→goblet identifica «Otro movimiento», explica diferencia y conserva series realizadas; laterales mancuernas↔polea adaptan repeticiones por lado y borradores vacíos; Pallof isométrico usa segundos por lado, no repeticiones.
+
+Se inspeccionaron capturas de Día, selector de alternativas y técnica de goblet a 375 × 812 px, en un contexto aislado. Sin errores de JavaScript ni desbordamiento horizontal. Los 39 clips conservan revisión profesional pendiente; estas pruebas no evalúan biomecánica ni resultados físicos.
 
 ## Auditoría móvil del 12 de octubre
 

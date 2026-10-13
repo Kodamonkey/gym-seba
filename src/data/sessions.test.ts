@@ -138,7 +138,7 @@ describe('plantilla vs sesión', () => {
     await saveTemplate(tpl);
     const after = await db.sessionExercises.where('sessionId').equals(s.id).toArray();
     expect(after.map((x) => x.prescribed)).toEqual(before.map((x) => x.prescribed));
-    expect((await db.routineTemplates.get('rt-atlas-4d'))?.version).toBe(2);
+    expect((await db.routineTemplates.get('rt-atlas-4d'))?.version).toBe(tpl.version + 1);
   });
 });
 

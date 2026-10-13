@@ -62,7 +62,7 @@ ${VARIANTS.filter((v) => !seen.has(v.id))
 ## Faltantes conocidos
 
 - Revisión biomecánica profesional de las ${CLIPS.size} animaciones, de los textos de técnica y de las asociaciones musculares.
-- La extensión de cuádriceps no tiene una sustitución directa definida; una "otra máquina equivalente" debe crearse como variante identificada (quedará sin demostración hasta incorporar un medio autorizado).
+- La extensión de cuádriceps ofrece sentadilla goblet como otro movimiento para trabajar piernas, no como aislamiento equivalente. Una máquina de extensión distinta debe identificarse antes de comparar cargas.
 - Vistas adicionales (segundo ángulo, rotación 3D): no implementadas; cada clip declara una sola vista.
 `;
   writeFileSync('docs/COVERAGE_MATRIX.md', matrix);

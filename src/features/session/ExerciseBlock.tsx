@@ -21,16 +21,22 @@ interface Props {
 
 /** Un ejercicio de la sesión: objetivo, lo de la última vez y sus series. */
 export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props) {
-  const [sugg, setSugg] = useState<Awaited<ReturnType<typeof suggestionsFor>> | null>(null);
-  const [menu, setMenu] = useState(false);
+  const suggestionContext = JSON.stringify([se.id, se.variantId, se.equipmentInstanceId, se.rev, se.unit]);
+  const [cachedSuggestions, setCachedSuggestions] = useState<{
+    context: string;
+    value: Awaited<ReturnType<typeof suggestionsFor>>;
+  } | null>(null);
+  // Una consulta pendiente de otra variante, máquina o revisión nunca alimenta las nuevas series.
+  const sugg = cachedSuggestions?.context === suggestionContext ? cachedSuggestions.value : null;
+  const [menu, setMenu] = useState<'options' | 'alternatives' | null>(null);
 
   useEffect(() => {
     let alive = true;
-    suggestionsFor(se).then((r) => alive && setSugg(r));
+    suggestionsFor(se).then((value) => alive && setCachedSuggestions({ context: suggestionContext, value }));
     return () => {
       alive = false;
     };
-  }, [se.id, se.variantId, se.equipmentInstanceId, se.rev]);
+  }, [suggestionContext]);
 
   const live = useMemo(() => sets.filter((s) => s.deletedAt === null).sort((a, b) => a.order - b.order), [sets]);
   const perSideRows = se.variant.laterality === 'unilateral' && se.unilateralLogging === 'per-side-rows';
@@ -87,21 +93,26 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
             {targetText(se.prescribed, se.variant.measure)} · descanso {se.prescribed.restSec} s · RIR {se.prescribed.rirMin}–{se.prescribed.rirMax}
           </p>
         </div>
-        <IconButton label={`Opciones de ${se.variant.name}`} onClick={() => setMenu(true)} className="-mr-2 -mt-2 text-muted">
+        <IconButton label={`Opciones de ${se.variant.name}`} onClick={() => setMenu('options')} className="-mr-2 -mt-2 text-muted">
           <MoreIcon size={22} />
         </IconButton>
       </div>
 
       {prevWork.length > 0 && <p className="mt-2 text-[13px] text-muted tabular">Última vez: {prevWork.map((s) => setText(s, s.unit)).join(' · ')}{previous && !previous.confirmed ? ' · misma máquina por confirmar' : ''}</p>}
       {advice && <p className="mt-2 rounded-xl bg-surface-2 px-3 py-2 text-[13px] text-muted">{advice.kind === 'needs-confirmation' ? 'Faltan datos para sugerir subir carga. Comprueba la técnica y el RIR con un entrenador antes de considerar un aumento.' : advice.message}</p>}
-      <button type="button" className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent" onClick={() => onTechnique(se.variantId)} aria-label={`Ver técnica de ${se.variant.name}`}>
-        <InfoIcon size={17} /> Ver técnica
-      </button>
+      <div className="mt-1 flex flex-wrap items-center gap-x-5">
+        <button type="button" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent" onClick={() => onTechnique(se.variantId)} aria-label={`Ver técnica de ${se.variant.name}`}>
+          <InfoIcon size={17} /> Ver técnica
+        </button>
+        <button type="button" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent disabled:opacity-40" onClick={() => setMenu('alternatives')} disabled={!canEdit} aria-label={`Cambiar ${se.variant.name}`}>
+          <SwapIcon size={17} /> Cambiar
+        </button>
+      </div>
 
       <div className="mt-3 grid grid-cols-[2rem_1fr_1fr_3rem] gap-2 pr-1 text-center text-[11px] font-semibold uppercase tracking-wider text-faint" aria-hidden>
         <span>Serie</span>
         <span>{se.variant.loadConvention === 'none' ? '' : loadColumn(se.variant, se.unit)}</span>
-        <span>{isTime ? 'Seg' : se.prescribed.repsMode === 'per-side' ? 'Reps/lado' : 'Reps'}</span>
+        <span>{isTime ? (se.prescribed.repsMode === 'per-side' ? 'Seg/lado' : 'Seg') : se.prescribed.repsMode === 'per-side' ? 'Reps/lado' : 'Reps'}</span>
         <span />
       </div>
       <ol className="mt-1 flex flex-col gap-1" aria-label={`Series de ${se.variant.name}`}>
@@ -121,14 +132,17 @@ export function ExerciseBlock({ session, se, sets, canEdit, onTechnique }: Props
       </ol>
 
       <ExerciseMenu
-        open={menu}
-        onClose={() => setMenu(false)}
+        open={menu !== null}
+        swapping={menu === 'alternatives'}
+        onSwap={() => setMenu('alternatives')}
+        onBack={() => setMenu('options')}
+        onClose={() => setMenu(null)}
         session={session}
         se={se}
         live={live}
         canEdit={canEdit}
         onTechnique={() => {
-          setMenu(false);
+          setMenu(null);
           onTechnique(se.variantId);
         }}
       />
@@ -159,6 +173,9 @@ function MenuItem({ icon, children, onClick, disabled }: { icon: ReactNode; chil
 
 function ExerciseMenu({
   open,
+  swapping,
+  onSwap,
+  onBack,
   onClose,
   session,
   se,
@@ -167,6 +184,9 @@ function ExerciseMenu({
   onTechnique,
 }: {
   open: boolean;
+  swapping: boolean;
+  onSwap: () => void;
+  onBack: () => void;
   onClose: () => void;
   session: WorkoutSession;
   se: SessionExercise;
@@ -175,7 +195,6 @@ function ExerciseMenu({
   onTechnique: () => void;
 }) {
   const toast = useToast();
-  const [swapping, setSwapping] = useState(false);
   const last = live[live.length - 1];
   const canRemove = !!last && last.status === 'draft' && live.length > 1;
 
@@ -188,11 +207,15 @@ function ExerciseMenu({
     const sameExercise = variant ? await db.variants.where('exerciseId').equals(variant.exerciseId).toArray() : [];
     const ids = new Set([...(slot?.alternativeVariantIds ?? []), ...sameExercise.map((v) => v.id), ...(se.substitutedFromVariantId ? [se.substitutedFromVariantId] : [])]);
     ids.delete(se.variantId);
-    return (await db.variants.bulkGet([...ids])).filter((v): v is ExerciseVariant => !!v && !v.archived);
+    const variants = (await db.variants.bulkGet([...ids])).filter((v): v is ExerciseVariant => !!v && !v.archived);
+    const otherMovement = variants.some((v) => v.exerciseId !== se.variant.exerciseId);
+    return {
+      variants,
+      note: slot?.noDirectAlternativeNote || (otherMovement ? slot?.notes : undefined),
+    };
   }, [open, session.id, se.slotId, se.variantId]);
 
   const close = () => {
-    setSwapping(false);
     onClose();
   };
   const run = async (fn: () => Promise<unknown>) => {
@@ -206,28 +229,37 @@ function ExerciseMenu({
   return (
     <Dialog open={open} onClose={close} title={swapping ? 'Cambiar por' : se.variant.name}>
       {swapping ? (
-        <ul className="flex flex-col">
-          <MenuItem icon={<ChevronLeftIcon />} onClick={() => setSwapping(false)}>
-            Volver
-          </MenuItem>
-          {alternatives?.map((v) => (
-            <MenuItem
-              key={v.id}
-              icon={<SwapIcon />}
-              disabled={!canEdit}
-              onClick={() =>
-                run(async () => {
-                  await substituteVariant(se.id, v.id);
-                  toast({ message: `Cambiado a ${v.name}.` });
-                  close();
-                })
-              }
-            >
-              {v.name}
+        <>
+          <p className="mb-2 text-sm text-muted">Si falta la máquina o está ocupada, elige otra opción. Confirma el equipo en tu sede.</p>
+          {alternatives?.note && <p className="mb-2 rounded-xl bg-surface-2 px-3 py-2 text-sm text-muted">{alternatives.note}</p>}
+          <ul className="flex flex-col">
+            <MenuItem icon={<ChevronLeftIcon />} onClick={onBack}>
+              Volver
             </MenuItem>
-          ))}
-          {alternatives && alternatives.length === 0 && <li className="py-3 text-sm text-muted">No hay alternativas para este ejercicio.</li>}
-        </ul>
+            {alternatives?.variants.map((v) => (
+              <MenuItem
+                key={v.id}
+                icon={<SwapIcon />}
+                disabled={!canEdit}
+                onClick={() =>
+                  run(async () => {
+                    await substituteVariant(se.id, v.id);
+                    toast({ message: `Cambiado a ${v.name}.` });
+                    close();
+                  })
+                }
+              >
+                <span className="min-w-0 flex-1 py-2">
+                  <span className="block font-medium leading-snug">{v.name}</span>
+                  <span className="mt-1 block text-xs text-muted">
+                    {EQUIPMENT_LABELS[v.equipmentKind]} · {v.exerciseId === se.variant.exerciseId ? 'Mismo ejercicio' : 'Otro movimiento'}
+                  </span>
+                </span>
+              </MenuItem>
+            ))}
+            {alternatives && alternatives.variants.length === 0 && <li className="py-3 text-sm text-muted">No hay alternativas para este ejercicio.</li>}
+          </ul>
+        </>
       ) : (
         <ul className="flex flex-col">
           <MenuItem icon={<InfoIcon />} onClick={onTechnique}>
@@ -249,12 +281,21 @@ function ExerciseMenu({
           >
             Quitar última serie
           </MenuItem>
-          <MenuItem icon={<SwapIcon />} disabled={!canEdit} onClick={() => setSwapping(true)}>
+          <MenuItem icon={<SwapIcon />} disabled={!canEdit} onClick={onSwap}>
             Cambiar ejercicio
           </MenuItem>
         </ul>
       )}
-      {swapping && <p className="mt-2 text-xs text-muted">Las cargas no se traspasan entre ejercicios distintos.</p>}
+      {swapping && <p className="mt-2 text-xs text-muted">Las series realizadas se conservan. La nueva variante empieza con carga vacía.</p>}
     </Dialog>
   );
 }
+
+const EQUIPMENT_LABELS: Record<ExerciseVariant['equipmentKind'], string> = {
+  machine: 'Máquina',
+  cable: 'Polea',
+  dumbbell: 'Mancuernas',
+  barbell: 'Barra y discos',
+  smith: 'Smith',
+  bodyweight: 'Peso corporal',
+};

@@ -3,6 +3,7 @@ import type { ID, SessionExercise, SetLog, WorkoutSession } from '../domain/type
 import { db, nowIso } from './db';
 import { adaptationFor, createProgram, startFreeWorkout, startScheduledWorkout } from './program';
 import { ROUTINE_TEMPLATE } from './seed/routine';
+import { upgradeRoutine } from './routine-upgrade';
 
 /**
  * Lecturas y acciones de alto nivel para la interfaz simple: un solo usuario, un solo gimnasio
@@ -32,6 +33,7 @@ export async function ensureProgram(): Promise<void> {
  * semana sin registro, la usa (el calendario queda al día); si no, inicia una sesión libre.
  */
 export async function startDay(dayId: ID, timeZone: string): Promise<WorkoutSession> {
+  await upgradeRoutine();
   const program = await db.programs.where('status').equals('active').first();
   const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
   if (!program || !template) throw new Error('No hay una rutina activa.');

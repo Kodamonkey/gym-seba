@@ -2,11 +2,24 @@
 
 Última revisión: **13 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. Las revisiones anteriores se conservan más abajo.
 
-## Preparación de GitHub Pages, 13 de octubre
+## GitHub Pages, 13 de octubre
 
 - `npm run typecheck`: sin errores; `npm test`: **187 pasan, 1 omitida**; `npm run e2e`: **23/23 pasan** (2,8 minutos).
 - Build con `ATLAS_BASE=/gym-seba/` correcta. HTML, iconos, JavaScript, CSS, manifest, `start_url` y `scope` usan esa subcarpeta.
-- Pages configurado por API con `build_type: workflow` y `https_enforced: true`. La verificación del despliegue remoto queda pendiente hasta publicar.
+- Pages configurado por API con `build_type: workflow` y `https_enforced: true`; [ejecución 38343711193](https://github.com/Kodamonkey/gym-seba/actions/runs/38343711193) correcta para `177a3db`. Instalación con `npm ci`, tipos, pruebas, build y despliegue también pasan en Ubuntu de GitHub Actions.
+
+**URL verificada:** [https://kodamonkey.github.io/gym-seba/](https://kodamonkey.github.io/gym-seba/). El JavaScript principal publicado coincide con la build local (`index-Ctcc8o74.js`).
+
+Prueba sobre la URL real con Edge, emulación Pixel 7 **412 × 839 px**, zona `America/Santiago` y contexto aislado sin registros de Seba:
+
+- Inicio, seis recursos referenciados por HTML, manifest, todos los iconos y `sw.js`: HTTP 200. Manifest `standalone`, `start_url` y `scope` correctos.
+- Primera apertura de `/gym-seba/ajustes` antes de instalar el worker: GitHub devuelve HTTP 404 con `404.html`; la app muestra Ajustes correctamente. Tras instalar el worker, recargas dentro del scope usan el shell en caché.
+- Service worker activo en `https://kodamonkey.github.io/gym-seba/sw.js`, scope `https://kodamonkey.github.io/gym-seba/`.
+- Historial inicialmente vacío. Sin conexión: abrir día, empezar sesión, confirmar **42,5 kg × 10**, recargar y recuperar valores y descanso. Terminar como parcial, abrir historial y recargar el detalle conserva la serie.
+- Exportación JSON sin conexión conserva la sesión parcial, la serie completada y su fecha local **2026-10-13**, comprobada contra el instante de inicio en Santiago.
+- Capturas de Inicio y Sesión inspeccionadas. Sin desbordamiento horizontal en Inicio ni errores JavaScript durante el recorrido. El contexto de prueba se cerró; no se subieron registros de entrenamiento a GitHub.
+
+La emulación no certifica instalación, teclado o bloqueo en Android/iOS físicos; pendiente 12 de `PENDIENTES.md`.
 
 ## Rutina v2 y alternativas, 13 de octubre
 

@@ -28,7 +28,7 @@ Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como
 13. Avisos de fin de descanso con el teléfono bloqueado o la pestaña suspendida: no garantizados (limitación del navegador; no se usan notificaciones push).
 14. Exportación `.ics` e integración con Google Calendar: no implementadas (mejora posterior; la segunda requiere autorización explícita).
 15. Sincronización entre dispositivos y cuentas: fuera del MVP. El respaldo JSON es el mecanismo de traslado.
-16. **Publicación en curso, 2026-10-13:** workflow `.github/workflows/pages.yml` preparado, Pages configurado para GitHub Actions y HTTPS obligatorio. Build local con `/gym-seba/` comprobada; quedan la subida, el despliegue remoto y comprobar la URL real.
+16. **Resuelto el 2026-10-13:** ATLAS publicado en [https://kodamonkey.github.io/gym-seba/](https://kodamonkey.github.io/gym-seba/), con HTTPS obligatorio y despliegue automático de `main` mediante `.github/workflows/pages.yml`. Ejecución de Actions y prueba móvil remota correctas: recursos, manifest, rutas, registro/recuperación offline y respaldo JSON. La instalación en teléfono físico sigue pendiente en el punto 12.
 
 ## Interfaz simple (rediseño 2026-10-11)
 

@@ -11,7 +11,7 @@ Aplicación web personal, *mobile-first* y *local-first* para entrenar en el gim
 
 ## Usar ATLAS en el celular
 
-Dirección de publicación: **[kodamonkey.github.io/gym-seba](https://kodamonkey.github.io/gym-seba/)**.
+ATLAS está publicado en **[kodamonkey.github.io/gym-seba](https://kodamonkey.github.io/gym-seba/)**.
 
 1. Abre esa dirección con conexión y espera el aviso «Lista para usarse sin conexión».
 2. Android: abre el menú de Chrome y elige «Instalar aplicación» o «Añadir a pantalla de inicio». iPhone: abre la dirección en Safari, toca Compartir y elige «Añadir a pantalla de inicio».

@@ -111,8 +111,8 @@
       "id": "A7",
       "objetivo": "Funcionar sin conexión (PWA) con datos solo en el dispositivo.",
       "estado": "hecho",
-      "evidencia": "vite-plugin-pwa + IndexedDB (Dexie); E2E de producción carga y registra sin conexión. Manifest e iconos propios en tema claro; falta verificar instalación física.",
-      "actualizado": "2026-10-12",
+      "evidencia": "vite-plugin-pwa + IndexedDB (Dexie); E2E y prueba en https://kodamonkey.github.io/gym-seba/ cargan, registran y recuperan series sin conexión. Service worker con scope /gym-seba/, manifest e iconos HTTPS comprobados. Emulación Edge Pixel 7 de 412×839; falta verificar instalación física.",
+      "actualizado": "2026-10-13",
       "pendientes": [12]
     },
     {
@@ -125,10 +125,10 @@
     {
       "id": "A9",
       "objetivo": "Usar la app desde el celular vía un hosting HTTPS.",
-      "estado": "parcial",
-      "evidencia": "Workflow .github/workflows/pages.yml preparado para main y Pages configurado con build_type workflow y HTTPS obligatorio. Build /gym-seba/ comprobada localmente; faltan subida, ejecución remota y verificación de la URL publicada.",
+      "estado": "hecho",
+      "evidencia": "Publicado en https://kodamonkey.github.io/gym-seba/ con HTTPS obligatorio. Workflow .github/workflows/pages.yml automático al subir a main; ejecución 38343711193 correcta. Build publicada coincide con la local. Prueba móvil remota: recursos y manifest 200, rutas profundas, sesión/historial recuperados offline, fecha America/Santiago y exportación JSON correctos; sin errores JavaScript. docs/TEST_RESULTS.md. Prueba física pendiente 12.",
       "actualizado": "2026-10-13",
-      "pendientes": [16]
+      "pendientes": [12]
     }
   ],
   "fuera_de_alcance": [

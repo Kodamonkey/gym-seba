@@ -9,6 +9,7 @@
 | `npm run typecheck` | Sin errores. |
 | `npm test` | **22 archivos pasan, 1 omitido**; **214 pruebas pasan, 1 omitida** (generador de documentos). |
 | `npm run e2e` | **24/24 pasan**, 3,3 minutos, build de producción y Microsoft Edge instalado. |
+| `npm run e2e:pages` | **1/1 pasa**, 23,4 segundos, build con `/gym-seba/` y Edge en puerto 4175. |
 
 - **Secuencia:** empieza en Día 1 cualquier fecha, avanza solo después de una completa y vuelve al primero tras Día 4. Parciales, descartes, programas ajenos y días retirados no adelantan. Un historial previo fuera de orden continúa tras su última completa válida. Orden estable incluso con distintos desfases horarios.
 - **Datos:** validar el día e iniciar comparten transacción; dos inicios simultáneos crean una sesión. Historial, series y planificación anterior quedan intactos. Exportar, borrar/resembrar e importar JSON recupera la misma posición, sin cursor adicional. Se preservan sesiones activas y actualización v1→v2 diferida.
@@ -17,6 +18,8 @@
 - **Móvil:** recorridos 320/375/390 px sin desbordamiento y controles de al menos 44 px. Se corrigió el encogimiento del botón Ajustes cuando el nuevo contador ocupa dos líneas.
 
 En la preparación de E2E se corrigieron helpers: esperar los ejercicios antes de contarlos, cerrar el descanso después de omitirlo y adaptar assertions a los nuevos textos. La pasada completa final indicada arriba verifica esas correcciones.
+
+**Regresión detectada en Pages:** al guardar y volver a Inicio, el router eliminaba la barra final y dejaba `/gym-seba`, fuera del scope `/gym-seba/`; recargar sin conexión fallaba. Se reprodujo en HTTPS y con la nueva prueba de subcarpeta, que falló antes de corregir el router y pasó después. `BrowserRouter` conserva `BASE_URL` completa. La prueba comprueba tanto `navigate('/')` al guardar como el enlace «Volver», la recarga offline y la serie en el historial. Esta prueba complementa los 24 escenarios de raíz; no necesita descargar un navegador.
 
 ## GitHub Pages, 13 de octubre
 

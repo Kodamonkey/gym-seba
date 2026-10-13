@@ -46,6 +46,7 @@ La adaptación cuenta entrenamientos completos: inicialmente ocho con hasta dos 
 | `npm run typecheck` | Comprobación de tipos (TypeScript, sin emitir). |
 | `npm test` | Pruebas unitarias e integración (Vitest + fake-indexeddb). |
 | `npm run e2e` | Construye, sirve con `vite preview` y ejecuta Playwright con Edge. |
+| `npm run e2e:pages` | Prueba producción en `/gym-seba/`: volver a Inicio, guardar y recargar offline dentro del scope PWA. |
 | `npm run build` | Typecheck + build de producción en `dist/` (incluye `404.html` para hosting estático). |
 | `npm run preview` | Sirve `dist/` localmente. |
 | `npm run docs:media` | Regenera `docs/COVERAGE_MATRIX.md` y `docs/MEDIA_MANIFEST.md` desde el código. |

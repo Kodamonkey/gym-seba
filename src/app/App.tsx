@@ -48,8 +48,9 @@ export function App() {
     );
   }
 
+  // La barra final mantiene los enlaces a Inicio dentro del scope de la PWA.
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ToastProvider>
         <MotionSync />
         <AppShell>

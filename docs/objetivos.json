@@ -114,7 +114,7 @@
       "id": "A7",
       "objetivo": "Funcionar sin conexión (PWA) con datos solo en el dispositivo.",
       "estado": "hecho",
-      "evidencia": "vite-plugin-pwa + IndexedDB (Dexie); E2E y prueba en https://kodamonkey.github.io/gym-seba/ cargan, registran y recuperan series sin conexión. Service worker con scope /gym-seba/, manifest e iconos HTTPS comprobados. Emulación Edge Pixel 7 de 412×839; falta verificar instalación física.",
+      "evidencia": "vite-plugin-pwa + IndexedDB (Dexie); E2E de raíz y subcarpeta /gym-seba/ comprueban guardar, volver a Inicio, recargar y recuperar series sin conexión. Router conserva BASE_URL con barra final dentro del scope PWA; regresión reproducida y corregida. Manifest e iconos HTTPS comprobados; falta verificar instalación física. docs/TEST_RESULTS.md; pendiente 23 resuelto.",
       "actualizado": "2026-10-13",
       "pendientes": [12]
     },

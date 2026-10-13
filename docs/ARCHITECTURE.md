@@ -8,7 +8,7 @@
 | Datos | `src/data` | IndexedDB (Dexie), siembra, operaciones transaccionales, respaldo/importación | dominio |
 | Anatomía | `src/anatomy` | Rig 2D, formas del cuerpo, equipo, clips, render imperativo, reproductor, manifiesto | dominio (tipos) |
 | Funcionalidades | `src/features` | Pantallas y flujos | todo lo anterior |
-| UI | `src/ui` | Componentes accesibles, avisos, gráficos | — |
+| UI | `src/ui` | Componentes accesibles, iconos SVG, avisos | — |
 
 PR, volumen, progresión, fechas e importación se prueban sin renderizar la interfaz (`*.test.ts`).
 
@@ -16,7 +16,19 @@ PR, volumen, progresión, fechas e importación se prueban sin renderizar la int
 
 React 19.3 · TypeScript 7.0 · Vite 8.3 · Tailwind CSS 4.3 · react-router 8.4 · Dexie 4.4 · Zod 4.6 · vite-plugin-pwa 2.0 (Workbox) · Vitest 5 + Testing Library + fake-indexeddb · Playwright 1.64 (Edge del sistema).
 
-Sin librería de gráficos ni de animación: los gráficos son SVG propios de una sola serie y las microanimaciones son CSS (respetan `prefers-reduced-motion` y la preferencia de la app).
+Sin librería de iconos, gráficos ni animación: los iconos son SVG en línea (`src/ui/icons.tsx`) y las microanimaciones son CSS (respetan `prefers-reduced-motion`).
+
+## Interfaz (rediseño minimalista, 2026-10-11)
+
+App de un solo usuario, un solo gimnasio y una rutina fija; prioridad: simple, clara y usable con una mano.
+
+- **Pantallas:** Inicio (`/`: lo que toca hoy, los días de la rutina con su estado de la semana y los últimos entrenamientos) → Día (`/dia/:id`: ejercicios, objetivo, lo de la última vez, técnica a un toque y "Empezar") → Sesión (`/sesion`: todos los ejercicios en una lista vertical, filas kg × reps con check) → Historial (`/historial`, `/historial/:id`) · Ajustes (`/ajustes`: descanso y respaldo).
+- **Sin configuración inicial:** `ensureProgram` (`src/data/overview.ts`) crea el programa la primera vez y marca el perfil como configurado. Empieza el lunes de esta semana si se abre de lunes a miércoles; si no, el lunes siguiente.
+- **Empezar un día:** `startDay` usa la sesión planificada de ese día en la semana actual si está libre (el calendario interno queda al día aunque se entrene otro día); si no, inicia una sesión libre.
+- **Registro rápido:** con los campos vacíos, el check guarda lo que se ve en gris (última vez de esa variante o, si no hay, la serie anterior de hoy). Enter en kg pasa a reps; Enter en reps marca la serie. Tocar una serie hecha la reabre para corregirla.
+- **Terminar:** se guarda como completa si están todas las series de trabajo, o como parcial si no; descartar no borra datos (queda `discarded`).
+- **Tema:** solo claro. Tokens en `:root` de `src/index.css`; negro como acción principal, verde solo para "hecho". Diálogos como hoja inferior (`<dialog>` nativo).
+- **Retirado de la interfaz** (el modelo de datos y sus pruebas siguen): configuración inicial, editor de rutina y biblioteca, calendario, progreso y gráficos, instancias de máquina y notas, RIR, calentamientos, técnica/dolor por ejercicio, tarjeta de progresión, cardio, temas y acento, fuentes y galería de demostraciones, reproductor de medios externos.
 
 ## Modelo de datos (IndexedDB `atlas`, esquema v1)
 
@@ -39,11 +51,11 @@ Todas las entidades tienen id estable (`crypto.randomUUID`) y `createdAt/updated
 ## Decisiones relevantes
 
 ### Registro y concurrencia
-- **Borrador ≠ realizado.** Los valores se guardan como borrador al salir del campo; una serie solo cuenta al confirmarla con datos válidos (`checkSetForConfirm`, la misma regla que la importación). Las sugerencias del registro anterior son *placeholders* y nunca se guardan solas.
+- **Borrador ≠ realizado.** Los valores se guardan como borrador al salir del campo; una serie solo cuenta al confirmarla con datos válidos (`checkSetForConfirm`, la misma regla que la importación). Las sugerencias del registro anterior son *placeholders*: solo se guardan si el usuario toca el check con el campo vacío (decisión explícita de repetir).
 - **Vacío ≠ cero.** `null` = no registrado; `0` = carga externa cero explícita.
 - **Confirmación idempotente** y transaccional: un doble toque no duplica ni re-escribe la fecha de ejecución.
-- **Sin sobrescrituras silenciosas:** cada escritura comprueba `rev`; además, Web Locks asigna una sola pestaña editora (las demás quedan en solo lectura con "Tomar el control"; si la editora se cierra, otra hereda el control). Dexie propaga los cambios entre pestañas.
-- **Deshacer** en confirmar, desmarcar, eliminar serie, omitir sesión y borrar medición.
+- **Sin sobrescrituras silenciosas:** cada escritura comprueba `rev`; además, Web Locks asigna una sola pestaña editora (las demás quedan en solo lectura con "Usar aquí"; si la editora se cierra, otra hereda el control). Dexie propaga los cambios entre pestañas.
+- **Corregir sin miedo:** tocar el check de una serie hecha la reabre; quitar una serie se puede deshacer.
 
 ### Tiempo
 - Fechas de planificación como `YYYY-MM-DD` con aritmética `Date.UTC`; instantes en ISO UTC + zona IANA. La fecha local se fija al iniciar la sesión, por lo que cambiar la zona preferida no altera el historial. Probado en medianoche, fin de año y ambas transiciones de horario de Chile.
@@ -61,9 +73,9 @@ Todas las entidades tienen id estable (`crypto.randomUUID`) y `createdAt/updated
   - **Músculos anclados a segmentos**: cada forma es una lista de anclas `[segmento, u, v]` resuelta en cada fotograma, así el resaltado se deforma con la articulación y no se separa del cuerpo.
   - **Escorzo** del húmero/antebrazo para movimientos fuera del plano (codos abiertos, aperturas) y extremidad cercana translúcida cuando tapa el músculo objetivo; ambas cosas se explican en el pie de cada clip.
   - Roles por variante: objetivo (coral sólido), participa (ámbar con rayas), estabilizador (azul con puntos, capa opcional); gris = no destacado. Nombres siempre visibles (no solo color). Sin intensidades por carga ni encendidos por fase.
-  - Fases propias de cada clip; isométricos se muestran como mantenimiento. Reproductor con reproducir/pausa, reinicio, velocidad, posición, inicio/fin, ampliar y capa de estabilizadores (capacidades reales porque el render es en vivo). Sin autoplay por defecto ni audio; con movimiento reducido muestra fotogramas de inicio y fin. Solo una demostración se reproduce a la vez y se pausa fuera de pantalla.
+  - Fases propias de cada clip; isométricos se muestran como mantenimiento. Reproductor con reproducir/pausa, reinicio, velocidad, posición, inicio/fin, ampliar y capa de estabilizadores (capacidades reales porque el render es en vivo). Se reproduce al abrir la hoja de técnica (sin audio); con movimiento reducido muestra fotogramas de inicio y fin. Solo una demostración se reproduce a la vez y se pausa fuera de pantalla.
   - Render imperativo: los paths se crean una vez y solo se actualiza `d` (sin re-render de React por fotograma).
-- **Medios externos** (`src/features/exercise/VideoPlayer.tsx`): soporte MP4/WebM/GIF con licencia declarada; solo se reproducen si están autorizados y vigentes, nunca se descargan ni precachean, y se informa la conexión al tercero.
+- **Medios externos:** el reproductor se retiró de la interfaz en el rediseño; la tabla `media` y su validación en el respaldo se mantienen.
 - Manifiesto con tres revisiones separadas (derechos, correspondencia, técnica). Ver `docs/MEDIA_MANIFEST.md` y `docs/COVERAGE_MATRIX.md`.
 
 ### Offline y PWA

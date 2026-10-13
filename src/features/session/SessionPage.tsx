@@ -3,27 +3,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useActiveSession, useEditorLock, useNow, usePrefs } from '../../app/hooks';
 import { formatDuration } from '../../domain/dates';
-import { isSessionPaused, sessionActiveMs } from '../../domain/timer';
-import type { SessionExercise, SetLog } from '../../domain/types';
-import { db, userMessage } from '../../data/db';
-import { pauseSession, resumeSession } from '../../data/sessions';
-import { Button, EmptyState, Loading, Pill } from '../../ui/primitives';
-import { useToast } from '../../ui/toast';
-import { ExercisePanel } from './ExercisePanel';
-import { FinishDialog } from './FinishDialog';
-import { RestTimerBar } from './RestTimerBar';
-import { AddExerciseDialog } from './AddExerciseDialog';
+import { sessionActiveMs } from '../../domain/timer';
+import type { SetLog } from '../../domain/types';
+import { db } from '../../data/db';
+import { Button, Loading, PageHeader } from '../../ui/primitives';
+import { TechniqueSheet } from '../exercise/TechniqueSheet';
+import { ExerciseBlock } from './ExerciseBlock';
+import { FinishSheet } from './FinishSheet';
+import { RestTimer } from './RestTimer';
 
-/** Modo entrenamiento: una sesión activa recuperable tras recargar o suspender la pestaña. */
+/** Entrenamiento en curso: todos los ejercicios en una lista; se recupera tras recargar. */
 export function SessionPage() {
   const session = useActiveSession();
   const navigate = useNavigate();
-  const toast = useToast();
   const prefs = usePrefs();
   const lock = useEditorLock(session?.id);
   const now = useNow(1000, !!session);
   const [finishOpen, setFinishOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
+  const [tech, setTech] = useState<string | null>(null);
 
   const data = useLiveQuery(async () => {
     if (!session) return null;
@@ -32,48 +29,7 @@ export function SessionPage() {
     return { ses, sets };
   }, [session?.id]);
 
-  const storageKey = session ? `atlas:current-exercise:${session.id}` : '';
-  const [current, setCurrent] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!data || !session) return;
-    if (current && data.ses.some((s) => s.id === current)) return;
-    let saved: string | null = null;
-    try {
-      saved = sessionStorage.getItem(storageKey);
-    } catch {
-      saved = null;
-    }
-    const fallback = data.ses.find((se) => pendingCount(se, data.sets) > 0)?.id ?? data.ses[0]?.id ?? null;
-    setCurrent(saved && data.ses.some((s) => s.id === saved) ? saved : fallback);
-  }, [data, session, current, storageKey]);
-
-  useEffect(() => {
-    if (!current || !storageKey) return;
-    try {
-      sessionStorage.setItem(storageKey, current);
-    } catch {
-      // Almacenamiento de sesión no disponible: solo se pierde el ejercicio seleccionado.
-    }
-  }, [current, storageKey]);
-
-  // Aviso de sesión recuperada (tras recargar, cerrar la app o volver de otra pantalla).
-  useEffect(() => {
-    if (!session) return;
-    const flag = `atlas:recovered:${session.id}`;
-    let shown = false;
-    try {
-      shown = sessionStorage.getItem(flag) === '1';
-      sessionStorage.setItem(flag, '1');
-    } catch {
-      shown = true;
-    }
-    if (!shown && Date.now() - Date.parse(session.startedAt) > 60_000) {
-      toast({ message: 'Sesión recuperada: todo lo que confirmaste está guardado.', tone: 'info' });
-    }
-  }, [session, toast]);
-
-  // Mantener la pantalla encendida (opcional y solo si el navegador lo permite).
+  // Mantener la pantalla encendida (si está activado y el navegador lo permite).
   useEffect(() => {
     if (!prefs?.keepAwake || !session || !('wakeLock' in navigator)) return;
     let sentinel: WakeLockSentinel | null = null;
@@ -97,126 +53,67 @@ export function SessionPage() {
     return m;
   }, [data?.sets]);
 
-  if (session === undefined || (session && !data)) return <Loading label="Recuperando la sesión…" />;
+  if (session === undefined || (session && !data)) return <Loading label="Recuperando el entrenamiento…" />;
   if (!session) {
     return (
-      <EmptyState title="No hay una sesión en curso" action={<Link to="/" className="text-accent underline">Ir a Hoy</Link>}>
-        Inicia el entrenamiento del día desde la pantalla Hoy.
-      </EmptyState>
+      <>
+        <PageHeader back="/" />
+        <div className="flex flex-col items-start gap-3 py-10">
+          <p className="text-lg font-semibold">No hay un entrenamiento en curso</p>
+          <Link to="/" className="font-medium underline underline-offset-4">
+            Ir al inicio
+          </Link>
+        </div>
+      </>
     );
   }
 
-  const paused = isSessionPaused(session.pauses);
+  let expected = 0;
+  let done = 0;
+  for (const se of data!.ses) {
+    const rows = se.prescribed.sets * (se.variant.laterality === 'unilateral' && se.unilateralLogging === 'per-side-rows' ? 2 : 1);
+    const sets = byExercise.get(se.id) ?? [];
+    expected += rows;
+    done += Math.min(rows, sets.filter((s) => s.deletedAt === null && s.kind === 'work' && s.status === 'completed').length);
+  }
   const elapsed = sessionActiveMs(session.startedAt, session.endedAt, session.pauses, now);
-  const ses = data!.ses;
-  const cur = ses.find((s) => s.id === current) ?? ses[0];
-  const idx = cur ? ses.indexOf(cur) : -1;
 
   return (
-    <div className="flex flex-col gap-3 pb-40">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-bold">{session.title}</h1>
-          <p className="text-sm text-muted tabular">
-            {paused ? 'Sesión en pausa' : 'Tiempo activo'}: {formatDuration(elapsed)}
-            {session.adaptation && ' · adaptación'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            disabled={!lock.canEdit}
-            onClick={() => (paused ? resumeSession(session.id) : pauseSession(session.id)).catch((e) => toast({ message: userMessage(e), tone: 'error' }))}
-          >
-            {paused ? 'Reanudar' : 'Pausar'}
+    <div className="pb-28">
+      <PageHeader
+        back="/"
+        title={session.title}
+        subtitle={`${formatDuration(elapsed)} · ${done}/${expected} series`}
+        progress={expected ? done / expected : 0}
+        action={
+          <Button size="sm" variant="primary" className="mr-1" disabled={!lock.canEdit} onClick={() => setFinishOpen(true)}>
+            Terminar
           </Button>
-          <Button variant="primary" disabled={!lock.canEdit} onClick={() => setFinishOpen(true)}>
-            Finalizar
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {lock.state === 'viewer' && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-warn bg-warn/10 p-3 text-sm" role="alert">
-          <span className="flex-1">Esta sesión se está editando en otra pestaña o ventana. Aquí solo puedes verla.</span>
+        <div className="mt-2 flex items-center gap-3 rounded-2xl bg-warn/10 p-3 text-sm" role="alert">
+          <span className="flex-1">Este entrenamiento está abierto en otra pestaña. Aquí solo puedes verlo.</span>
           <Button size="sm" onClick={lock.takeControl}>
-            Tomar el control aquí
+            Usar aquí
           </Button>
         </div>
       )}
 
-      <nav aria-label="Ejercicios de la sesión" className="-mx-4 overflow-x-auto px-4">
-        <ol className="flex gap-2 pb-1">
-          {ses.map((se, i) => {
-            const pending = pendingCount(se, byExercise.get(se.id) ?? []);
-            const isCur = se.id === cur?.id;
-            return (
-              <li key={se.id}>
-                <button
-                  type="button"
-                  onClick={() => setCurrent(se.id)}
-                  aria-current={isCur ? 'step' : undefined}
-                  className={`flex min-h-12 max-w-48 flex-col items-start rounded-xl border px-3 py-1.5 text-left text-xs ${isCur ? 'border-accent bg-accent/10' : 'border-line bg-surface'}`}
-                >
-                  <span className="font-semibold">
-                    {i + 1}. {pending === 0 ? '✓ ' : ''}
-                    <span className="line-clamp-1">{se.variant.name}</span>
-                  </span>
-                  <span className="text-muted">{pending === 0 ? 'Completo' : `${pending} pendiente${pending === 1 ? '' : 's'}`}</span>
-                </button>
-              </li>
-            );
-          })}
-          <li>
-            <button type="button" disabled={!lock.canEdit} onClick={() => setAddOpen(true)} className="min-h-12 rounded-xl border border-dashed border-line px-3 text-xs text-muted">
-              + Añadir ejercicio
-            </button>
-          </li>
-        </ol>
-      </nav>
+      {data!.ses.map((se) => (
+        <ExerciseBlock key={se.id} session={session} se={se} sets={byExercise.get(se.id) ?? []} canEdit={lock.canEdit} onTechnique={setTech} />
+      ))}
 
-      {cur ? (
-        <div key={cur.id} className="anim-fade">
-          <ExercisePanel session={session} se={cur} sets={byExercise.get(cur.id) ?? []} canEdit={lock.canEdit} />
-          <div className="mt-4 flex justify-between gap-2">
-            <Button disabled={idx <= 0} onClick={() => setCurrent(ses[idx - 1]!.id)}>
-              ← Anterior
-            </Button>
-            {idx < ses.length - 1 ? (
-              <Button variant="primary" onClick={() => setCurrent(ses[idx + 1]!.id)}>
-                Siguiente ejercicio →
-              </Button>
-            ) : (
-              <Button variant="primary" disabled={!lock.canEdit} onClick={() => setFinishOpen(true)}>
-                Finalizar sesión
-              </Button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <EmptyState title="Esta sesión no tiene ejercicios" action={<Button onClick={() => setAddOpen(true)}>Añadir ejercicio</Button>} />
+      {done >= expected && expected > 0 && (
+        <Button variant="primary" size="lg" className="mt-4 w-full" disabled={!lock.canEdit} onClick={() => setFinishOpen(true)}>
+          Terminar entrenamiento
+        </Button>
       )}
 
-      <p className="text-xs text-faint">
-        Todo se guarda en este dispositivo al confirmar cada serie. Puedes recargar o cerrar la app y retomar aquí. <Pill>Sesión {session.id.slice(0, 8)}</Pill>
-      </p>
-
-      <RestTimerBar sessionId={session.id} canEdit={lock.canEdit} />
-      <FinishDialog
-        open={finishOpen}
-        onClose={() => setFinishOpen(false)}
-        session={session}
-        onDone={(id) => {
-          setFinishOpen(false);
-          navigate(`/historial/${id}`);
-        }}
-      />
-      <AddExerciseDialog open={addOpen} onClose={() => setAddOpen(false)} sessionId={session.id} onAdded={(id) => setCurrent(id)} />
+      <RestTimer sessionId={session.id} canEdit={lock.canEdit} />
+      <TechniqueSheet variantId={tech} onClose={() => setTech(null)} />
+      <FinishSheet open={finishOpen} onClose={() => setFinishOpen(false)} session={session} done={done} expected={expected} onDone={() => navigate('/', { replace: true })} />
     </div>
   );
-}
-
-function pendingCount(se: SessionExercise, sets: SetLog[]): number {
-  const perSide = se.variant.laterality === 'unilateral' && se.unilateralLogging === 'per-side-rows' ? 2 : 1;
-  const done = sets.filter((s) => s.sessionExerciseId === se.id && s.deletedAt === null && s.kind === 'work' && s.status === 'completed').length;
-  return Math.max(0, se.prescribed.sets * perSide - done);
 }

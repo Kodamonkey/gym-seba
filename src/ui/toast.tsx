@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { CloseIcon } from './icons';
 
 /**
  * Avisos breves con acción opcional (p. ej. "Deshacer"). Los mensajes de éxito solo se
@@ -39,27 +40,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-40 flex flex-col items-center gap-2 px-4" aria-live="polite" role="status">
+      <div className="pointer-events-none fixed inset-x-0 top-[calc(0.75rem+env(safe-area-inset-top))] z-50 flex flex-col items-center gap-2 px-4" aria-live="polite" role="status">
         {items.map((t) => (
           <div
             key={t.id}
-            className={`anim-fade pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border px-4 py-3 shadow-lg ${
-              t.tone === 'error'
-                ? 'border-danger bg-surface text-text'
-                : t.tone === 'celebrate'
-                  ? 'anim-celebrate border-accent bg-surface text-text'
-                  : 'border-line bg-surface-2 text-text'
+            className={`anim-fade pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-2xl py-2 pl-4 pr-2 text-sm shadow-xl ${
+              t.tone === 'error' ? 'bg-danger text-white' : 'bg-text text-bg'
             }`}
           >
-            <span className="flex-1 text-sm">
-              {t.tone === 'error' && <strong className="text-danger">Error: </strong>}
-              {t.tone === 'celebrate' && <span aria-hidden>★ </span>}
-              {t.message}
-            </span>
+            <span className="flex-1 py-1.5">{t.message}</span>
             {t.action && (
               <button
                 type="button"
-                className="min-h-10 rounded-lg px-3 font-semibold text-accent hover:bg-surface-3"
+                className="min-h-10 rounded-full px-3 font-semibold underline-offset-2 active:bg-white/15"
                 onClick={async () => {
                   dismiss(t.id);
                   await t.action!.run();
@@ -68,8 +61,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {t.action.label}
               </button>
             )}
-            <button type="button" className="h-9 w-9 rounded-lg text-muted hover:bg-surface-3" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso">
-              ✕
+            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full opacity-70 active:bg-white/15" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso">
+              <CloseIcon size={18} />
             </button>
           </div>
         ))}

@@ -1,102 +1,80 @@
 import { useEffect, useRef, useState } from 'react';
-import { loadLabel } from '../../domain/load';
 import type { SessionExercise, SetLog } from '../../domain/types';
-import { checkSetForConfirm, formatDecimal, parseDuration, parseLoad, parseReps, parseRir } from '../../domain/validation';
+import { checkSetForConfirm, formatDecimal, parseDuration, parseLoad, parseReps } from '../../domain/validation';
 import { userMessage } from '../../data/db';
-import { addSet, deleteSet, moveSet, restoreSet, uncompleteSet, updateSet } from '../../data/sessions';
+import { confirmSet, uncompleteSet, updateSet } from '../../data/sessions';
 import { startRestTimer } from '../../data/timers';
 import { usePrefs } from '../../app/hooks';
+import { CheckIcon } from '../../ui/icons';
 import { Button, Dialog } from '../../ui/primitives';
-import { useToast } from '../../ui/toast';
-import { PR_LABEL } from '../../domain/pr';
-import { confirmWithRecords, restAfter, type Suggestion } from './logic';
+import { restAfter, type Suggestion } from './logic';
 
 interface Props {
   set: SetLog;
-  index: number;
   se: SessionExercise;
+  /** Valores de la última vez: se muestran en gris y se usan si confirmas con el campo vacío. */
   suggestion?: Suggestion | undefined;
   canEdit: boolean;
-  workNumber: number | null;
-  /** Corrección de una sesión pasada: sin descanso ni celebración. */
-  historical?: boolean;
+  label: string;
 }
-
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const durationText = (s: number | null) => (s === null ? '' : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : String(s));
 
 /**
- * Fila de serie. Los valores sugeridos aparecen como marcador (no cuentan).
- * Los borradores se guardan al salir del campo; "Guardado" se muestra solo tras escribir.
+ * Fila de serie: carga, repeticiones (o segundos) y el botón de hecho.
+ * Lo escrito se guarda como borrador al salir del campo; solo cuenta al marcarla como hecha.
+ * Tocar el check de una serie hecha la vuelve a abrir para corregirla.
  */
-export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }: Props) {
-  const toast = useToast();
+export function SetRow({ set, se, suggestion, canEdit, label }: Props) {
   const prefs = usePrefs();
   const [load, setLoad] = useState(formatDecimal(set.load));
   const [reps, setReps] = useState(set.reps?.toString() ?? '');
   const [dur, setDur] = useState(durationText(set.durationSec));
-  const [rir, setRir] = useState(formatDecimal(set.rir));
   const [err, setErr] = useState<string | null>(null);
-  const [save, setSave] = useState<SaveState>('idle');
-  const [editing, setEditing] = useState(false);
-  const [menu, setMenu] = useState(false);
   const [warn, setWarn] = useState<string[] | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const busy = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const repsRef = useRef<HTMLInputElement>(null);
   // Última revisión conocida y guardado de borrador en curso: evita conflictos falsos
-  // cuando el usuario sale del campo y toca "confirmar" en el mismo gesto.
+  // cuando se sale del campo y se toca el check en el mismo gesto.
   const revRef = useRef(set.rev);
   const pending = useRef<Promise<unknown> | null>(null);
+  const focused = useRef(false);
+  const saving = useRef(0);
   useEffect(() => {
     revRef.current = Math.max(revRef.current, set.rev);
   }, [set.rev]);
-  const isTime = se.variant.measure === 'time';
-  const done = set.status === 'completed';
-  const locked = !canEdit || (done && !editing);
 
-  // Sincroniza con cambios externos (otra pestaña, deshacer) cuando no se está editando
-  // ni hay un guardado propio en curso (no pisa lo recién escrito).
-  const focused = useRef(false);
-  const saving = useRef(0);
+  const isTime = se.variant.measure === 'time';
+  const hasLoad = se.variant.loadConvention !== 'none';
+  const done = set.status === 'completed';
+  const locked = !canEdit || done;
+
+  // Sincroniza con cambios externos (otra pestaña, deshacer) si no se está escribiendo.
   useEffect(() => {
     if (focused.current || saving.current > 0) return;
     setLoad(formatDecimal(set.load));
     setReps(set.reps?.toString() ?? '');
     setDur(durationText(set.durationSec));
-    setRir(formatDecimal(set.rir));
-  }, [set.load, set.reps, set.durationSec, set.rir, set.rev]);
+  }, [set.load, set.reps, set.durationSec, set.rev]);
 
-  function parsed() {
-    const l = parseLoad(load);
-    const r = isTime ? { ok: true as const, value: null } : parseReps(reps);
-    const d = isTime ? parseDuration(dur) : { ok: true as const, value: null };
-    const q = parseRir(rir);
-    const firstErr = [l, r, d, q].find((x) => !x.ok) as { ok: false; error: string } | undefined;
+  function parse(raw: { load: string; reps: string; dur: string }) {
+    const l = hasLoad ? parseLoad(raw.load) : { ok: true as const, value: null };
+    const r = isTime ? { ok: true as const, value: null } : parseReps(raw.reps);
+    const d = isTime ? parseDuration(raw.dur) : { ok: true as const, value: null };
+    const firstErr = [l, r, d].find((x) => !x.ok) as { ok: false; error: string } | undefined;
     if (firstErr) return { error: firstErr.error } as const;
-    return {
-      values: {
-        load: l.ok ? l.value : null,
-        reps: r.ok ? r.value : null,
-        durationSec: d.ok ? d.value : null,
-        rir: q.ok ? q.value : null,
-      },
-    } as const;
+    return { values: { load: l.ok ? l.value : null, reps: r.ok ? r.value : null, durationSec: d.ok ? d.value : null } } as const;
   }
 
   async function saveDraft() {
     focused.current = false;
-    if (!canEdit || (done && !editing)) return;
-    const p = parsed();
-    if ('error' in p) {
-      setErr(p.error ?? null);
-      return;
-    }
+    if (locked) return;
+    const p = parse({ load, reps, dur });
+    if ('error' in p) return setErr(p.error ?? null);
     setErr(null);
     const v = p.values;
-    if (v.load === set.load && v.reps === set.reps && v.durationSec === set.durationSec && v.rir === set.rir) return;
-    if (done) return; // las correcciones de series confirmadas se guardan con el botón
-    setSave('saving');
+    if (v.load === set.load && v.reps === set.reps && v.durationSec === set.durationSec) return;
     saving.current += 1;
     try {
       // Los guardados se encadenan: cada uno usa la revisión que dejó el anterior.
@@ -108,194 +86,117 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
         });
       pending.current = pr;
       await pr;
-      setSave('saved');
     } catch (e) {
-      setSave('error');
       setErr(userMessage(e));
     } finally {
       saving.current -= 1;
     }
   }
 
-  async function doConfirm(force = false) {
-    if (busy.current) return;
-    const p = parsed();
-    if ('error' in p) {
-      setErr(p.error ?? null);
-      return;
-    }
-    const check = checkSetForConfirm(p.values, { measure: se.variant.measure, loadConvention: se.variant.loadConvention });
-    if (check.errors.length) {
-      setErr(check.errors.join(' '));
-      return;
-    }
-    if (check.warnings.length && !force) {
-      setWarn(check.warnings);
-      return;
-    }
+  async function confirm(force = false) {
+    if (busyRef.current || !canEdit) return;
+    // Campo vacío = repetir lo de la última vez (lo que se ve en gris).
+    const raw = {
+      load: load.trim() || (suggestion?.load != null ? formatDecimal(suggestion.load) : ''),
+      reps: reps.trim() || (suggestion?.reps != null ? String(suggestion.reps) : ''),
+      dur: dur.trim() || durationText(suggestion?.durationSec ?? null),
+    };
+    const p = parse(raw);
+    if ('error' in p) return setErr(p.error ?? null);
+    const missing = [hasLoad && p.values.load === null && 'kg', !isTime && p.values.reps === null && 'reps', isTime && p.values.durationSec === null && 'segundos'].filter(Boolean);
+    if (missing.length) return setErr(`Escribe ${missing.join(' y ')}${hasLoad && p.values.load === null ? ' (0 si no usas peso)' : ''}.`);
+    const check = checkSetForConfirm({ ...p.values, rir: set.rir }, { measure: se.variant.measure, loadConvention: se.variant.loadConvention });
+    if (check.errors.length) return setErr(check.errors.join(' '));
+    if (check.warnings.length && !force) return setWarn(check.warnings);
     setWarn(null);
     setErr(null);
-    busy.current = true;
-    setConfirming(true);
-    setSave('saving');
+    setLoad(raw.load);
+    setReps(raw.reps);
+    setDur(raw.dur);
+    busyRef.current = true;
+    setBusy(true);
     try {
       await pending.current?.catch(() => undefined);
-      if (done && editing) {
-        const fixed = await updateSet(set.id, p.values, revRef.current);
-        revRef.current = fixed.rev;
-        setEditing(false);
-        setSave('saved');
-        toast({ message: 'Corrección guardada. Los récords se recalcularon.', tone: 'ok' });
-        return;
-      }
-      const { saved, records } = await confirmWithRecords({ ...set, rev: revRef.current }, p.values, se);
+      const saved = await confirmSet(set.id, p.values, revRef.current);
       revRef.current = saved.rev;
-      setSave('saved');
-      if (historical) {
-        toast({ message: 'Serie registrada en la sesión pasada. Las estadísticas se recalcularon.', tone: 'ok', action: { label: 'Deshacer', run: () => void uncompleteSet(saved.id) } });
-        return;
-      }
       const rest = restAfter(saved, se);
       if (rest > 0 && (prefs?.autoStartRest ?? true)) await startRestTimer(se.sessionId, saved.id, rest);
-      if (records.length) {
-        toast({
-          tone: 'celebrate',
-          message: `Nuevo récord: ${records.map((r) => PR_LABEL[r.type].toLowerCase()).join(', ')}.`,
-          action: { label: 'Deshacer serie', run: () => void uncompleteSet(saved.id) },
-        });
-      } else {
-        toast({ message: 'Serie guardada.', tone: 'ok', action: { label: 'Deshacer', run: () => void uncompleteSet(saved.id) } });
-      }
     } catch (e) {
-      setSave('error');
       setErr(userMessage(e));
     } finally {
-      busy.current = false;
-      setConfirming(false);
+      busyRef.current = false;
+      setBusy(false);
     }
   }
 
-  function fillSuggestion() {
-    if (!suggestion) return;
-    if (suggestion.load !== null) setLoad(formatDecimal(suggestion.load));
-    if (suggestion.reps !== null) setReps(String(suggestion.reps));
-    if (suggestion.durationSec !== null) setDur(durationText(suggestion.durationSec));
+  async function reopen() {
+    if (!canEdit) return;
+    try {
+      const saved = await uncompleteSet(set.id);
+      revRef.current = saved.rev;
+    } catch (e) {
+      setErr(userMessage(e));
+    }
   }
 
-  const label = set.kind === 'warmup' ? 'C' : (workNumber ?? '–');
-  const sideLabel = set.side === 'left' ? 'Izq.' : set.side === 'right' ? 'Der.' : null;
-  const unit = se.unit;
+  const repsLabel = isTime ? 'Segundos' : se.prescribed.repsMode === 'per-side' && set.side === null ? 'Repeticiones por lado' : 'Repeticiones';
 
   return (
-    <li className={`rounded-xl border px-2 py-2 ${done ? 'border-ok/40 bg-ok/5' : 'border-line bg-surface-2'} ${done && !editing ? 'anim-pop' : ''}`}>
-      <div className="flex items-center gap-2">
-        <div className="flex w-10 flex-none flex-col items-center text-center" aria-label={set.kind === 'warmup' ? 'Serie de calentamiento' : `Serie de trabajo ${workNumber}`}>
-          <span className={`text-lg font-bold ${set.kind === 'warmup' ? 'text-warn' : ''}`}>{label}</span>
-          {sideLabel && <span className="text-[10px] text-muted">{sideLabel}</span>}
-        </div>
-        <div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5">
-          {se.variant.loadConvention !== 'none' && (
-            <NumInput
-              label={`Carga (${loadLabel(se.variant.loadConvention, se.variant.implements, unit)})`}
-              short={unit}
-              value={load}
-              onChange={setLoad}
-              onFocus={() => (focused.current = true)}
-              onBlur={saveDraft}
-              placeholder={suggestion?.load != null ? formatDecimal(suggestion.load) : ''}
-              disabled={locked}
-              decimal
-            />
-          )}
-          {isTime ? (
-            <NumInput label="Duración (s o m:ss)" short="s" value={dur} onChange={setDur} onFocus={() => (focused.current = true)} onBlur={saveDraft} placeholder={suggestion?.durationSec != null ? durationText(suggestion.durationSec) : ''} disabled={locked} />
-          ) : (
-            <NumInput
-              label={se.prescribed.repsMode === 'per-side' && set.side === null ? 'Repeticiones por lado' : 'Repeticiones'}
-              short={se.prescribed.repsMode === 'per-side' && set.side === null ? 'rep/lado' : 'rep'}
-              value={reps}
-              onChange={setReps}
-              onFocus={() => (focused.current = true)}
-              onBlur={saveDraft}
-              placeholder={suggestion?.reps != null ? String(suggestion.reps) : ''}
-              disabled={locked}
-            />
-          )}
-          <NumInput label="RIR (opcional)" short="RIR" value={rir} onChange={setRir} onFocus={() => (focused.current = true)} onBlur={saveDraft} placeholder="" disabled={locked} decimal />
-        </div>
-        <div className="flex flex-none items-center gap-1">
-          {done && !editing ? (
-            <button
-              type="button"
-              className="h-12 w-12 rounded-xl bg-ok/20 text-xl text-ok"
-              aria-label="Serie confirmada. Tocar para corregir"
-              disabled={!canEdit}
-              onClick={() => setEditing(true)}
-            >
-              ✓
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="h-12 w-12 rounded-xl bg-accent text-xl font-bold text-accent-ink disabled:opacity-50"
-              aria-label={editing ? 'Guardar corrección' : 'Confirmar serie'}
-              disabled={!canEdit || confirming}
-              onClick={() => doConfirm()}
-            >
-              {confirming ? '…' : editing ? '💾' : '✓'}
-            </button>
-          )}
-          <button type="button" className="h-12 w-9 rounded-xl text-muted hover:bg-surface-3" aria-label="Más acciones de la serie" aria-expanded={menu} disabled={!canEdit} onClick={() => setMenu((m) => !m)}>
-            ⋯
-          </button>
-        </div>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 pl-12 text-xs">
-        {suggestion && !done && (
-          <button type="button" className="text-accent underline" onClick={fillSuggestion} disabled={!canEdit}>
-            Usar {suggestion.source === 'progression' ? 'carga aceptada' : `anterior (${suggestion.fromDate})`}
-          </button>
-        )}
-        {save === 'saving' && <span className="text-muted">Guardando…</span>}
-        {save === 'saved' && <span className="text-ok">Guardado</span>}
-        {set.load === 0 && <span className="text-faint">Carga externa 0 registrada explícitamente</span>}
-        {err && (
-          <span className="text-danger" role="alert">
-            {err}
+    <li>
+      <div className={`grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 rounded-2xl py-1 pr-1 transition-colors ${done ? 'bg-ok/8' : ''}`}>
+        <span className={`text-center text-[15px] font-semibold tabular ${done ? 'text-ok' : 'text-muted'}`} aria-label={`Serie ${label}`}>
+          {label}
+        </span>
+        {hasLoad ? (
+          <NumInput
+            label={`Carga serie ${label}`}
+            value={load}
+            onChange={setLoad}
+            onFocus={() => (focused.current = true)}
+            onBlur={saveDraft}
+            onEnter={() => repsRef.current?.focus()}
+            placeholder={suggestion?.load != null ? formatDecimal(suggestion.load) : ''}
+            disabled={locked}
+            decimal
+            enterKeyHint="next"
+          />
+        ) : (
+          <span className="text-center text-faint" aria-hidden>
+            —
           </span>
         )}
+        <NumInput
+          ref={repsRef}
+          label={`${repsLabel} serie ${label}`}
+          value={isTime ? dur : reps}
+          onChange={isTime ? setDur : setReps}
+          onFocus={() => (focused.current = true)}
+          onBlur={saveDraft}
+          onEnter={() => {
+            repsRef.current?.blur();
+            void confirm();
+          }}
+          placeholder={isTime ? durationText(suggestion?.durationSec ?? null) : suggestion?.reps != null ? String(suggestion.reps) : ''}
+          disabled={locked}
+          enterKeyHint="done"
+        />
+        <button
+          type="button"
+          onClick={() => (done ? reopen() : confirm())}
+          disabled={!canEdit || busy}
+          aria-label={done ? `Serie ${label} hecha. Tocar para corregir` : `Marcar serie ${label} como hecha`}
+          aria-pressed={done}
+          className={`inline-flex h-12 w-12 items-center justify-center justify-self-end rounded-full transition-colors duration-150 disabled:opacity-40 ${
+            done ? 'bg-ok text-white' : 'border-2 border-surface-3 text-faint active:bg-surface-2'
+          }`}
+        >
+          <CheckIcon size={22} strokeWidth={3} />
+        </button>
       </div>
-      {menu && canEdit && (
-        <div className="mt-2 flex flex-wrap gap-1.5 pl-12">
-          <Button size="sm" onClick={() => addSet(se.id, set.kind, set.id).then(() => setMenu(false))}>
-            Duplicar
-          </Button>
-          <Button size="sm" onClick={() => moveSet(set.id, -1)}>
-            ↑ Subir
-          </Button>
-          <Button size="sm" onClick={() => moveSet(set.id, 1)}>
-            ↓ Bajar
-          </Button>
-          <Button size="sm" onClick={() => updateSet(set.id, { kind: set.kind === 'work' ? 'warmup' : 'work' }, set.rev).catch((e) => setErr(userMessage(e)))}>
-            {set.kind === 'work' ? 'Marcar calentamiento' : 'Marcar de trabajo'}
-          </Button>
-          {done && (
-            <Button size="sm" onClick={() => uncompleteSet(set.id).then(() => toast({ message: 'Serie desmarcada: ya no cuenta como realizada.', tone: 'ok' }))}>
-              Desmarcar
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={async () => {
-              await deleteSet(set.id);
-              setMenu(false);
-              toast({ message: 'Serie eliminada.', tone: 'ok', action: { label: 'Deshacer', run: () => void restoreSet(set.id) } });
-            }}
-          >
-            Eliminar
-          </Button>
-        </div>
+      {err && (
+        <p className="pb-1 pl-10 pr-2 text-[13px] text-danger" role="alert">
+          {err}
+        </p>
       )}
       <Dialog
         open={!!warn}
@@ -303,16 +204,16 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
         title="¿Valores correctos?"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setWarn(null)}>
-              Revisar
-            </Button>
-            <Button variant="primary" onClick={() => doConfirm(true)}>
+            <Button variant="primary" size="lg" onClick={() => confirm(true)}>
               Sí, guardar
+            </Button>
+            <Button size="lg" onClick={() => setWarn(null)}>
+              Revisar
             </Button>
           </>
         }
       >
-        <ul className="list-disc pl-5 text-sm">
+        <ul className="list-disc pl-5 text-[15px] text-muted">
           {warn?.map((w) => (
             <li key={w}>{w}</li>
           ))}
@@ -322,59 +223,60 @@ export function SetRow({ set, se, suggestion, canEdit, workNumber, historical }:
   );
 }
 
-function NumInput({
+const NumInput = ({
+  ref,
   label,
-  short,
   value,
   onChange,
   onBlur,
   onFocus,
+  onEnter,
   placeholder,
   disabled,
   decimal,
+  enterKeyHint,
 }: {
+  ref?: React.Ref<HTMLInputElement>;
   label: string;
-  short: string;
   value: string;
   onChange: (v: string) => void;
   onBlur: () => void;
   onFocus: () => void;
+  onEnter: () => void;
   placeholder: string;
   disabled: boolean;
   decimal?: boolean;
-}) {
-  return (
-    <label className="flex min-w-0 flex-col">
-      <span className="sr-only">{label}</span>
-      <div className="relative">
-        <input
-          className="h-12 w-full min-w-0 rounded-lg border border-line bg-surface pl-2 pr-6 text-base font-semibold tabular placeholder:font-normal placeholder:text-faint disabled:bg-transparent disabled:text-text"
-          size={1}
-          inputMode={decimal ? 'decimal' : 'numeric'}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-          onFocus={(e) => {
-            onFocus();
-            ensureVisible(e.currentTarget);
-          }}
-          placeholder={placeholder}
-          disabled={disabled}
-          aria-label={label}
-          enterKeyHint="next"
-          autoComplete="off"
-        />
-        <span className="pointer-events-none absolute right-1.5 top-1 text-[10px] text-faint" aria-hidden>
-          {short}
-        </span>
-      </div>
-    </label>
-  );
-}
+  enterKeyHint: 'next' | 'done';
+}) => (
+  <input
+    ref={ref}
+    className="h-12 w-full min-w-0 rounded-xl bg-surface-2 text-center text-[17px] font-semibold tabular text-text placeholder:font-medium placeholder:text-faint focus:bg-surface focus:outline-2 focus:outline-text disabled:bg-transparent"
+    size={1}
+    inputMode={decimal ? 'decimal' : 'numeric'}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    onBlur={onBlur}
+    onFocus={(e) => {
+      onFocus();
+      ensureVisible(e.currentTarget);
+    }}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onEnter();
+      }
+    }}
+    placeholder={placeholder}
+    disabled={disabled}
+    aria-label={label}
+    enterKeyHint={enterKeyHint}
+    autoComplete="off"
+  />
+);
 
 /**
- * Tras abrir el teclado, si el campo quedó tapado (teclado, temporizador o barra inferior),
- * lo desplaza de forma instantánea. Sin animación, para no mover botones mientras se tocan.
+ * Tras abrir el teclado, si el campo quedó tapado (teclado o temporizador), lo centra
+ * sin animación para no mover botones mientras se tocan.
  */
 function ensureVisible(el: HTMLElement) {
   window.setTimeout(() => {
@@ -382,7 +284,6 @@ function ensureVisible(el: HTMLElement) {
     const vv = window.visualViewport;
     const height = vv ? vv.height : window.innerHeight;
     const rect = el.getBoundingClientRect();
-    const reserved = 150;
-    if (rect.bottom > height - reserved || rect.top < 64) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+    if (rect.bottom > height - 120 || rect.top < 64) el.scrollIntoView({ block: 'center', behavior: 'auto' });
   }, 300);
 }

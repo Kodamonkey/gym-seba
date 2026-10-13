@@ -1,29 +1,26 @@
 import { expect, type Page } from '@playwright/test';
 
-/** Completa la configuración inicial con los valores precargados y una medición de peso. */
-export async function onboard(page: Page) {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Bienvenido a ATLAS' })).toBeVisible();
-  await page.getByLabel('Peso', { exact: true }).fill('82');
-  await page.getByRole('button', { name: 'Crear programa y empezar' }).click();
-  await expect(page.getByRole('heading', { name: 'Hoy', exact: true })).toBeVisible();
-}
-
-/** Inicia una sesión libre de un día de la rutina. */
-export async function startFree(page: Page, day = 'Tren superior A') {
-  await page.getByLabel('Día de la rutina').selectOption({ label: day });
-  await page.getByRole('button', { name: /Iniciar sesión libre/ }).click();
-  await expect(page).toHaveURL(/\/sesion$/);
-}
-
 /** Pausa breve como la de una persona (el teclado móvil y el ajuste de scroll tardan ~300 ms). */
 export const humanPause = (page: Page) => page.waitForTimeout(450);
 
-export async function logSet(page: Page, index: number, load: string, reps: string, rir?: string) {
-  await page.getByLabel(/^Carga/).nth(index).fill(load);
-  await page.getByLabel('Repeticiones').nth(index).fill(reps);
-  if (rir !== undefined) await page.getByLabel('RIR (opcional)').nth(index).fill(rir);
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Bloque de un ejercicio en la sesión (sección nombrada por su título). */
+export const exercise = (page: Page, name = 'Press de pecho en máquina') => page.getByRole('region', { name: new RegExp(escape(name)) });
+
+/** Abre un día de la rutina y empieza el entrenamiento. */
+export async function startDay(page: Page, dayId = 'day-upper-a') {
+  await page.goto(`/dia/${dayId}`);
+  await page.getByRole('button', { name: 'Empezar', exact: true }).click();
+  await expect(page).toHaveURL(/\/sesion$/);
+}
+
+export async function logSet(page: Page, index: number, load: string, reps: string, name?: string) {
+  const ex = exercise(page, name);
+  const n = index + 1;
+  await ex.getByLabel(`Carga serie ${n}`, { exact: true }).fill(load);
+  await ex.getByLabel(`Repeticiones serie ${n}`, { exact: true }).fill(reps);
   await humanPause(page);
-  await page.getByRole('button', { name: 'Confirmar serie' }).first().click();
-  await expect(page.getByRole('button', { name: 'Serie confirmada. Tocar para corregir' })).toHaveCount(index + 1);
+  await ex.getByRole('button', { name: `Marcar serie ${n} como hecha` }).click();
+  await expect(ex.getByRole('button', { name: `Serie ${n} hecha. Tocar para corregir` })).toBeVisible();
 }

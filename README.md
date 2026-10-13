@@ -1,10 +1,10 @@
 # ATLAS — Mi entrenamiento
 
-Aplicación web personal, *mobile-first* y *local-first* para entrenar en el gimnasio: ver la sesión del día, observar una demostración anatómica (persona + equipo + músculos resaltados sobre su propio cuerpo), registrar series con pocos toques, descansar con un temporizador recuperable y revisar el progreso y los récords.
+Aplicación web personal, *mobile-first* y *local-first* para entrenar en el gimnasio. Interfaz mínima y clara pensada para usarse con una mano en el teléfono: ver los días de la rutina, empezar el de hoy, registrar las series (kg × reps, un toque para repetir lo de la última vez), descansar con un temporizador recuperable y revisar el historial. La técnica de cada ejercicio (demostración anatómica + texto) queda a un toque, sin estorbar.
 
 - Sin cuenta, sin backend, sin analítica: los datos viven en el navegador (IndexedDB).
 - Funciona sin conexión después de abrirla una vez (PWA con service worker).
-- Rutina inicial de 8 semanas y 4 días (superior/inferior) precargada y editable.
+- Rutina de 8 semanas y 4 días (superior/inferior) precargada; el programa se crea solo al abrir la app (sin configuración inicial).
 - 39 demostraciones anatómicas propias (SVG animado en vivo) para todas las variantes principales y alternativas.
 
 > **Estado honesto.** Las animaciones, los textos de técnica y las asociaciones musculares fueron creados por este proyecto y **no tienen revisión biomecánica profesional**. No se compraron ni incorporaron medios de terceros. La rutina es la configuración acordada para la app, no una prescripción médica. Ver [docs/PENDIENTES.md](docs/PENDIENTES.md).
@@ -24,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. La primera vez se muestra la configuración inicial (datos, fecha de inicio del programa y medición inicial).
+Abre `http://localhost:5173`. No hay configuración inicial: el perfil (172 cm, 82 kg) viene precargado y el programa empieza el lunes de la semana en curso (o el siguiente, si se abre de jueves a domingo).
 
 ## Scripts
 
@@ -49,7 +49,7 @@ Abre `http://localhost:5173`. La primera vez se muestra la configuración inicia
   ```
 
   (En PowerShell: `$env:ATLAS_BASE='/mi-repo/'; npm run build`.) El router, el manifiesto y el service worker usan esa base.
-- **Rutas profundas.** La app usa rutas reales (`/progreso`, `/historial/:id`…). El build copia `index.html` a `404.html` para que hosts como GitHub Pages devuelvan la app al recargar una ruta profunda. En otros hosts, configura el *fallback* SPA a `index.html`.
+- **Rutas profundas.** La app usa rutas reales (`/dia/:id`, `/historial/:id`…). El build copia `index.html` a `404.html` para que hosts como GitHub Pages devuelvan la app al recargar una ruta profunda. En otros hosts, configura el *fallback* SPA a `index.html`.
 - **Service worker.** Precachea solo el shell y el código propio (incluidas las animaciones). Una versión nueva **no recarga la página sola**: aparece un aviso "Aplicar actualización".
 - Este repositorio no está publicado ni conectado a ningún remoto. No se configuró GitHub Pages.
 
@@ -61,8 +61,8 @@ src/
               PR, progresión, temporizador, calendario y cumplimiento, CSV, manifiesto de medios
   data/       IndexedDB (Dexie, esquema versionado), siembra, sesiones, programa, respaldo
   anatomy/    rig anatómico SVG (cinemática + IK), cuerpo por vista, equipo, 39 clips, reproductor
-  features/   pantallas: onboarding, Hoy, sesión, Mi rutina, Calendario, Progreso, Ajustes, Fuentes
-  ui/         componentes accesibles, avisos con deshacer, gráficos SVG
+  features/   pantallas: inicio (días), día, sesión, historial, ajustes; hoja de técnica
+  ui/         componentes accesibles (hoja inferior, interruptores), iconos SVG, avisos
 tests/e2e/    Playwright
 docs/         arquitectura, respaldo, manifiesto, cobertura, resultados de pruebas, pendientes
 ```

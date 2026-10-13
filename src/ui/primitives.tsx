@@ -1,14 +1,19 @@
 import { forwardRef, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { Link } from 'react-router';
+import { ChevronLeftIcon, CloseIcon } from './icons';
 
 /** Componentes base accesibles: objetivos táctiles ≥ 44 px, foco visible y etiquetas. */
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive' | 'inverse';
 
 const VARIANT_CLASS: Record<Variant, string> = {
-  primary: 'bg-accent text-accent-ink font-semibold hover:brightness-110',
-  secondary: 'bg-surface-3 text-text hover:brightness-110',
-  ghost: 'bg-transparent text-text hover:bg-surface-2',
-  danger: 'bg-danger text-white font-semibold hover:brightness-110',
+  primary: 'bg-accent text-accent-ink font-semibold active:opacity-80',
+  secondary: 'bg-surface-2 text-text font-medium active:bg-surface-3',
+  ghost: 'bg-transparent text-text active:bg-surface-2',
+  danger: 'bg-transparent text-danger font-medium active:bg-danger/10',
+  destructive: 'bg-danger text-white font-semibold active:opacity-80',
+  /** Sobre fondos oscuros. */
+  inverse: 'bg-bg text-text font-semibold active:opacity-80',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,12 +26,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { variant = 'secondary', size = 'md', busy, className = '', children, disabled, ...rest },
   ref,
 ) {
-  const sizeCls = size === 'lg' ? 'min-h-14 px-5 text-lg' : size === 'sm' ? 'min-h-10 px-3 text-sm' : 'min-h-11 px-4';
+  const sizeCls = size === 'lg' ? 'min-h-14 px-6 text-[17px]' : size === 'sm' ? 'min-h-10 px-3.5 text-sm' : 'min-h-12 px-5';
   return (
     <button
       ref={ref}
       type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-xl transition disabled:cursor-not-allowed disabled:opacity-50 ${sizeCls} ${VARIANT_CLASS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full transition-[opacity,background-color] duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${sizeCls} ${VARIANT_CLASS[variant]} ${className}`}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       {...rest}
@@ -37,9 +42,66 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
 });
 
+/** Botón solo con icono: siempre con etiqueta accesible. */
+export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(function IconButton(
+  { label, className = '', children, ...rest },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-text transition-colors active:bg-surface-2 disabled:opacity-40 ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+});
+
+/** Encabezado de pantalla: volver (opcional), título y acción a la derecha. */
+export function PageHeader({
+  back,
+  title,
+  subtitle,
+  action,
+  progress,
+}: {
+  back?: string;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  /** 0–1: barra fina de avance bajo el encabezado. */
+  progress?: number;
+}) {
+  return (
+    <header className="sticky top-0 z-20 -mx-4 mb-2 flex min-h-14 items-center gap-1 bg-bg/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur">
+      {back ? (
+        <Link to={back} aria-label="Volver" className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full active:bg-surface-2">
+          <ChevronLeftIcon size={24} />
+        </Link>
+      ) : (
+        <span className="w-2" />
+      )}
+      <div className="min-w-0 flex-1">
+        {title && <h1 className="truncate text-[17px] font-semibold leading-tight">{title}</h1>}
+        {subtitle && <p className="truncate text-[13px] text-muted tabular">{subtitle}</p>}
+      </div>
+      {action}
+      {progress !== undefined && (
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-surface-2" aria-hidden>
+          <div className="h-full bg-ok transition-[width] duration-300" style={{ width: `${Math.round(Math.min(1, Math.max(0, progress)) * 100)}%` }} />
+        </div>
+      )}
+    </header>
+  );
+}
+
 export function Card({ children, className = '', as: As = 'section', ...rest }: { children: ReactNode; className?: string; as?: 'section' | 'div' | 'article' } & Record<string, unknown>) {
   return (
-    <As className={`rounded-2xl border border-line bg-surface p-4 ${className}`} {...rest}>
+    <As className={`rounded-2xl bg-surface-2 p-4 ${className}`} {...rest}>
       {children}
     </As>
   );
@@ -58,7 +120,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({ l
   const hintId = `${inputId}-hint`;
   const errId = `${inputId}-err`;
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={inputId} className="text-sm font-medium text-muted">
         {label}
       </label>
@@ -66,7 +128,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({ l
         <input
           ref={ref}
           id={inputId}
-          className={`min-h-11 w-full min-w-0 rounded-lg border bg-surface-2 px-3 text-text ${error ? 'border-danger' : 'border-line'}`}
+          className={`min-h-12 w-full min-w-0 rounded-xl border bg-surface-2 px-3.5 text-base text-text ${error ? 'border-danger' : 'border-transparent'}`}
           aria-invalid={error ? true : undefined}
           aria-describedby={[hint ? hintId : '', error ? errId : ''].filter(Boolean).join(' ') || undefined}
           {...rest}
@@ -74,7 +136,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({ l
         {suffix && <span className="text-sm text-muted">{suffix}</span>}
       </div>
       {hint && (
-        <p id={hintId} className="text-xs text-faint">
+        <p id={hintId} className="text-xs text-muted">
           {hint}
         </p>
       )}
@@ -104,36 +166,47 @@ export function Select({
 }) {
   const id = useId();
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
+    <div className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={id} className="text-sm font-medium text-muted">
         {label}
       </label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-11 w-full min-w-0 rounded-lg border border-line bg-surface-2 px-3 text-text">
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-12 w-full min-w-0 rounded-xl bg-surface-2 px-3 text-base text-text">
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
       </select>
-      {hint && <p className="text-xs text-faint">{hint}</p>}
+      {hint && <p className="text-xs text-muted">{hint}</p>}
     </div>
   );
 }
 
+/** Interruptor de ajuste en una fila de lista. */
 export function Toggle({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
   const id = useId();
   return (
-    <div className="flex items-start justify-between gap-3 py-1">
+    <div className="flex min-h-14 items-center justify-between gap-4 py-2">
       <label htmlFor={id} className="flex flex-col">
-        <span>{label}</span>
-        {hint && <span className="text-xs text-faint">{hint}</span>}
+        <span className="text-[15px]">{label}</span>
+        {hint && <span className="text-xs text-muted">{hint}</span>}
       </label>
-      <input id={id} type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 h-6 w-11 accent-[var(--accent)]" />
+      <input
+        id={id}
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="relative h-7 w-12 flex-none cursor-pointer appearance-none rounded-full bg-surface-3 transition-colors before:absolute before:left-0.5 before:top-0.5 before:h-6 before:w-6 before:rounded-full before:bg-white before:shadow before:transition-transform checked:bg-ok checked:before:translate-x-5"
+      />
     </div>
   );
 }
 
-/** Diálogo modal nativo (<dialog>): foco atrapado y Escape para cerrar. */
+/**
+ * Diálogo modal nativo (<dialog>) presentado como hoja inferior en el teléfono:
+ * foco atrapado, Escape y toque fuera para cerrar.
+ */
 export function Dialog({
   open,
   onClose,
@@ -164,20 +237,23 @@ export function Dialog({
         e.preventDefault();
         onClose();
       }}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-2xl border border-line bg-surface p-0 text-text backdrop:bg-black/60"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="sheet mx-auto mb-0 mt-auto w-full rounded-t-3xl bg-surface p-0 text-text shadow-2xl sm:mb-auto sm:w-[min(30rem,calc(100vw-2rem))] sm:rounded-3xl"
     >
       {open && (
-        <div className="flex max-h-[85dvh] flex-col">
-          <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+        <div className="flex max-h-[88dvh] flex-col pb-[env(safe-area-inset-bottom)]">
+          <header className="flex items-center justify-between gap-2 px-5 pb-1 pt-4">
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
-            <button type="button" className="h-10 w-10 rounded-lg hover:bg-surface-2" onClick={onClose} aria-label="Cerrar">
-              ✕
-            </button>
+            <IconButton label="Cerrar" onClick={onClose} className="-mr-2 text-muted">
+              <CloseIcon />
+            </IconButton>
           </header>
-          <div className="overflow-y-auto px-4 py-3">{children}</div>
-          {footer && <footer className="flex flex-wrap justify-end gap-2 border-t border-line px-4 py-3">{footer}</footer>}
+          <div className="overflow-y-auto px-5 pb-4 pt-1">{children}</div>
+          {footer && <footer className="flex flex-col gap-2 px-5 pb-5">{footer}</footer>}
         </div>
       )}
     </dialog>
@@ -186,7 +262,7 @@ export function Dialog({
 
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-start gap-2 rounded-2xl border border-dashed border-line p-5">
+    <div className="flex flex-col items-start gap-2 py-8">
       <p className="font-semibold">{title}</p>
       {children && <div className="text-sm text-muted">{children}</div>}
       {action}
@@ -196,14 +272,14 @@ export function EmptyState({ title, children, action }: { title: string; childre
 
 export function Pill({ children, tone = 'neutral', className = '' }: { children: ReactNode; tone?: 'neutral' | 'ok' | 'warn' | 'danger' | 'info' | 'accent'; className?: string }) {
   const toneCls = {
-    neutral: 'bg-surface-3 text-text',
-    ok: 'bg-ok/15 text-ok',
-    warn: 'bg-warn/15 text-warn',
-    danger: 'bg-danger/15 text-danger',
-    info: 'bg-info/15 text-info',
-    accent: 'bg-accent/15 text-accent',
+    neutral: 'bg-surface-2 text-muted',
+    ok: 'bg-ok/10 text-ok',
+    warn: 'bg-warn/10 text-warn',
+    danger: 'bg-danger/10 text-danger',
+    info: 'bg-info/10 text-info',
+    accent: 'bg-accent text-accent-ink',
   }[tone];
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${toneCls} ${className}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${toneCls} ${className}`}>{children}</span>;
 }
 
 export function Loading({ label = 'Cargando…' }: { label?: string }) {
@@ -217,8 +293,8 @@ export function Loading({ label = 'Cargando…' }: { label?: string }) {
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-2 mt-1 flex items-center justify-between gap-2">
-      <h2 className="text-base font-semibold text-muted">{children}</h2>
+    <div className="mb-1 mt-2 flex min-h-11 items-center justify-between gap-2">
+      <h2 className="text-[13px] font-semibold uppercase tracking-wider text-muted">{children}</h2>
       {action}
     </div>
   );

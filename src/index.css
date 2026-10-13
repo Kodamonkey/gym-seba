@@ -1,76 +1,30 @@
 @import 'tailwindcss';
 
 /*
- * Tokens de diseño. Los valores semánticos cambian por tema; las utilidades de Tailwind
+ * Tokens de diseño: un solo tema claro y minimalista. Las utilidades de Tailwind
  * apuntan a estas variables (bg-surface, text-muted, etc.).
  */
-:root,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --bg: #121417;
-  --surface: #1b1e23;
-  --surface-2: #23272e;
-  --surface-3: #2c313a;
-  --border: #353b45;
-  --text: #eef0f3;
-  --muted: #a3aab5;
-  --faint: #757d89;
-  --accent: #3ddc97;
-  --accent-ink: #062b1b;
-  --danger: #ff6b6b;
-  --warn: #f5b13d;
-  --ok: #3ddc97;
-  --info: #6aa4ff;
-  --focus: #9ad0ff;
-  /* Serie única de gráficos: validada (banda OKLCH L 0.48–0.67 y contraste ≥ 3:1 sobre la superficie). */
-  --chart: #22a96f;
-
-  /* Anatomía */
-  --m-stage: #17191d;
-  --m-skin: #c4cad3;
-  --m-skin-line: #6d7581;
-  --m-muscle: #d3d8df;
-  --m-muscle-line: #8d96a2;
-  --m-far: rgba(18, 20, 24, 0.38);
-  --m-target: #ff5a4e;
-  --m-target-line: #b8261c;
-  --m-syn: #f5b13d;
-  --m-syn-line: #9b6a10;
-  --m-stab: #4f8cff;
-  --m-stab-line: #1f4fb0;
-  --eq-frame: #5b636f;
-  --eq-frame-line: #3b414a;
-  --eq-pad: #4b525e;
-  --eq-pad-line: #23272d;
-  --eq-metal: #aab2bd;
-  --eq-plate: #2b3037;
-  --eq-plate-line: #6b7480;
-  --eq-stack: #444b55;
-  --eq-stack-live: #737c88;
-  --eq-cable: #b5bcc6;
-  --eq-floor: #23272e;
-}
-
-[data-theme='light'] {
+:root {
   color-scheme: light;
-  --bg: #f3f4f6;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f0f1f4;
-  --surface-3: #e4e7ec;
-  --border: #d3d7de;
-  --text: #15181d;
-  --muted: #535b66;
-  --faint: #7a828d;
-  --accent: #0f8f5c;
+  --surface-2: #f4f4f5;
+  --surface-3: #e8e8eb;
+  --border: #e6e6e9;
+  --text: #0b0b0c;
+  --muted: #5f636b;
+  --faint: #8a8d94;
+  --accent: #0b0b0c;
   --accent-ink: #ffffff;
   --danger: #c62828;
   --warn: #9a6200;
-  --ok: #0f8f5c;
+  --ok: #138a3e;
   --info: #1d5fd1;
-  --focus: #1d5fd1;
-  --chart: #0f8f5c;
+  --focus: #2563eb;
+  --chart: #138a3e;
 
-  --m-stage: #eef0f3;
+  /* Anatomía */
+  --m-stage: #f4f4f5;
   --m-skin: #c9ced6;
   --m-skin-line: #6a727e;
   --m-muscle: #d9dde3;
@@ -113,7 +67,7 @@
   --color-m-target: var(--m-target);
   --color-m-syn: var(--m-syn);
   --color-m-stab: var(--m-stab);
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 html,
@@ -127,6 +81,39 @@ body {
 body {
   min-height: 100dvh;
   overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+summary,
+label[for] {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Los campos numéricos sin flechas: se escribe con el teclado del teléfono. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hoja inferior (diálogos) en móvil; centrada en pantallas anchas. */
+dialog.sheet {
+  max-width: 100vw;
+  max-height: 100dvh;
+}
+dialog.sheet::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+dialog.sheet[open] {
+  animation: sheet-in 200ms ease-out;
+}
+@keyframes sheet-in {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 
 :focus-visible {
@@ -259,7 +246,3 @@ body {
 }
 .legend-neutral { background: var(--m-muscle); }
 
-/* Con el teclado abierto la navegación se oculta: el descanso baja al borde inferior. */
-[data-typing='true'] .rest-timer {
-  bottom: calc(0.5rem + env(safe-area-inset-bottom));
-}

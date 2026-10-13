@@ -9,6 +9,16 @@ Aplicación web personal, *mobile-first* y *local-first* para entrenar en el gim
 
 > **Estado honesto.** Las animaciones, los textos de técnica y las asociaciones musculares fueron creados por este proyecto y **no tienen revisión biomecánica profesional**. No se compraron ni incorporaron medios de terceros. La rutina es la configuración acordada para la app, no una prescripción médica. Ver [docs/PENDIENTES.md](docs/PENDIENTES.md).
 
+## Usar ATLAS en el celular
+
+Dirección de publicación: **[kodamonkey.github.io/gym-seba](https://kodamonkey.github.io/gym-seba/)**.
+
+1. Abre esa dirección con conexión y espera el aviso «Lista para usarse sin conexión».
+2. Android: abre el menú de Chrome y elige «Instalar aplicación» o «Añadir a pantalla de inicio». iPhone: abre la dirección en Safari, toca Compartir y elige «Añadir a pantalla de inicio».
+3. Entra desde el icono de ATLAS para entrenar. Las series, fechas y sesiones se guardan en ese dispositivo, incluso sin conexión.
+
+Usa siempre el mismo navegador o la app instalada. Los datos del servidor local o de otro teléfono no aparecen automáticamente: exporta un respaldo JSON desde Ajustes e impórtalo en la instalación elegida. Haz respaldos periódicos; borrar los datos del navegador elimina el registro local. Ver [docs/BACKUP.md](docs/BACKUP.md).
+
 ## Requisitos
 
 - Node.js 20.19 o superior (probado con Node 24.19 y npm 11.17).
@@ -45,13 +55,13 @@ Abre `http://localhost:5173`. No hay configuración inicial: el perfil (172 cm, 
 - **Base path.** Para publicar en una subcarpeta (p. ej. GitHub Pages en `/<repo>/`), construye con la variable `ATLAS_BASE`:
 
   ```bash
-  ATLAS_BASE=/mi-repo/ npm run build
+  ATLAS_BASE=/gym-seba/ npm run build
   ```
 
-  (En PowerShell: `$env:ATLAS_BASE='/mi-repo/'; npm run build`.) El router, el manifiesto y el service worker usan esa base.
+  (En PowerShell: `$env:ATLAS_BASE='/gym-seba/'; npm run build`.) El router, el manifiesto y el service worker usan esa base.
 - **Rutas profundas.** La app usa rutas reales (`/dia/:id`, `/historial/:id`…). El build copia `index.html` a `404.html` para que hosts como GitHub Pages devuelvan la app al recargar una ruta profunda. En otros hosts, configura el *fallback* SPA a `index.html`.
-- **Service worker.** Precachea solo el shell y el código propio (incluidas las animaciones). Una versión nueva **no recarga la página sola**: aparece un aviso "Aplicar actualización".
-- Este repositorio no está publicado ni conectado a ningún remoto. No se configuró GitHub Pages.
+- **Service worker.** Precachea solo el shell y el código propio (incluidas las animaciones). Una versión nueva **no recarga la página sola**: aparece el aviso «Nueva versión disponible» con el botón «Actualizar».
+- **GitHub Pages.** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) comprueba tipos y pruebas, construye con la ruta que informa Pages y publica `dist/`. Se ejecuta al subir a `main` o manualmente desde Actions. Pages debe usar «GitHub Actions» como origen. Las actualizaciones del sitio conservan IndexedDB; los respaldos siguen siendo responsabilidad del usuario.
 
 ## Estructura
 
@@ -74,6 +84,7 @@ docs/         arquitectura, respaldo, manifiesto, cobertura, resultados de prueb
 - [Manifiesto de medios](docs/MEDIA_MANIFEST.md) y [matriz de cobertura](docs/COVERAGE_MATRIX.md)
 - [Resultados de pruebas ejecutadas](docs/TEST_RESULTS.md)
 - [Pendientes concretos](docs/PENDIENTES.md)
+- [Objetivos y su estado](docs/objetivos.json) y [especificación original](docs/PROMPT_MAESTRO.md); guía para agentes en [AGENTS.md](AGENTS.md)
 
 ## Avisos
 

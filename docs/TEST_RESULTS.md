@@ -2,6 +2,12 @@
 
 Última revisión: **13 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. Las revisiones anteriores se conservan más abajo.
 
+## Preparación de GitHub Pages, 13 de octubre
+
+- `npm run typecheck`: sin errores; `npm test`: **187 pasan, 1 omitida**; `npm run e2e`: **23/23 pasan** (2,8 minutos).
+- Build con `ATLAS_BASE=/gym-seba/` correcta. HTML, iconos, JavaScript, CSS, manifest, `start_url` y `scope` usan esa subcarpeta.
+- Pages configurado por API con `build_type: workflow` y `https_enforced: true`. La verificación del despliegue remoto queda pendiente hasta publicar.
+
 ## Rutina v2 y alternativas, 13 de octubre
 
 | Comando | Resultado |

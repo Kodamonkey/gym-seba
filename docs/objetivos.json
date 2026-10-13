@@ -7,7 +7,8 @@
     "Pedido de rediseño minimalista en chat (2026-10-11)",
     "Pedido de registrar objetivos para otros agentes en chat (2026-10-12)",
     "Pedido de auditoría completa, alineación con objetivos y mejora móvil de UI/UX en chat (2026-10-12)",
-    "Pedido de rutina basada en literatura y equipos de Vespucio, con alternativas si falta una máquina (2026-10-12–13); edad 25 años y ninguna restricción informadas por Seba"
+    "Pedido de rutina basada en literatura y equipos de Vespucio, con alternativas si falta una máquina (2026-10-12–13); edad 25 años y ninguna restricción informadas por Seba",
+    "Pedido de subir los cambios a GitHub y publicar ATLAS en GitHub Pages para usarlo desde el celular (2026-10-13)"
   ],
   "usuario": {
     "nombre": "Seba",
@@ -124,8 +125,9 @@
     {
       "id": "A9",
       "objetivo": "Usar la app desde el celular vía un hosting HTTPS.",
-      "estado": "pendiente",
-      "evidencia": "Remoto origin en GitHub existe; el repo no incluye workflow de despliegue y no hay hosting confirmado.",
+      "estado": "parcial",
+      "evidencia": "Workflow .github/workflows/pages.yml preparado para main y Pages configurado con build_type workflow y HTTPS obligatorio. Build /gym-seba/ comprobada localmente; faltan subida, ejecución remota y verificación de la URL publicada.",
+      "actualizado": "2026-10-13",
       "pendientes": [16]
     }
   ],

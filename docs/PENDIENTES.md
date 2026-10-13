@@ -28,7 +28,7 @@ Lo que **no** está hecho o no está verificado. Nada pendiente se presenta como
 13. Avisos de fin de descanso con el teléfono bloqueado o la pestaña suspendida: no garantizados (limitación del navegador; no se usan notificaciones push).
 14. Exportación `.ics` e integración con Google Calendar: no implementadas (mejora posterior; la segunda requiere autorización explícita).
 15. Sincronización entre dispositivos y cuentas: fuera del MVP. El respaldo JSON es el mecanismo de traslado.
-16. Despliegue: el repositorio tiene un remoto `origin` en GitHub (rama `main`), pero no incluye workflow de despliegue ni hay un hosting confirmado para abrir la app en el celular.
+16. **Publicación en curso, 2026-10-13:** workflow `.github/workflows/pages.yml` preparado, Pages configurado para GitHub Actions y HTTPS obligatorio. Build local con `/gym-seba/` comprobada; quedan la subida, el despliegue remoto y comprobar la URL real.
 
 ## Interfaz simple (rediseño 2026-10-11)
 

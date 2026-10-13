@@ -2,6 +2,22 @@
 
 Última revisión: **13 de octubre de 2026** en Windows, con Microsoft Edge instalado (`channel: 'msedge'`). Solo se listan verificaciones realmente ejecutadas. Las revisiones anteriores se conservan más abajo.
 
+## Rutina secuencial Día 1–4, 13 de octubre
+
+| Comando | Resultado |
+|---|---|
+| `npm run typecheck` | Sin errores. |
+| `npm test` | **22 archivos pasan, 1 omitido**; **214 pruebas pasan, 1 omitida** (generador de documentos). |
+| `npm run e2e` | **24/24 pasan**, 3,3 minutos, build de producción y Microsoft Edge instalado. |
+
+- **Secuencia:** empieza en Día 1 cualquier fecha, avanza solo después de una completa y vuelve al primero tras Día 4. Parciales, descartes, programas ajenos y días retirados no adelantan. Un historial previo fuera de orden continúa tras su última completa válida. Orden estable incluso con distintos desfases horarios.
+- **Datos:** validar el día e iniciar comparten transacción; dos inicios simultáneos crean una sesión. Historial, series y planificación anterior quedan intactos. Exportar, borrar/resembrar e importar JSON recupera la misma posición, sin cursor adicional. Se preservan sesiones activas y actualización v1→v2 diferida.
+- **Adaptación:** completas, no calendario; ocho completas ofrecen el cambio y esperan confirmación. Decisiones previas respetadas, extensión y decisión atómicas, concurrencia y rollback probados. Actividad parcial reciente evita falso aviso de inactividad.
+- **E2E nuevas:** domingo y ocho semanas sin entrenar conservan Día 1; URL del Día 2 permite consultar pero bloquea empezar; completar las doce series del Día 1 habilita Día 2; offline y recarga conservan turno; una parcial del Día 2 no lo adelanta. Los registros usados son de contextos de prueba aislados.
+- **Móvil:** recorridos 320/375/390 px sin desbordamiento y controles de al menos 44 px. Se corrigió el encogimiento del botón Ajustes cuando el nuevo contador ocupa dos líneas.
+
+En la preparación de E2E se corrigieron helpers: esperar los ejercicios antes de contarlos, cerrar el descanso después de omitirlo y adaptar assertions a los nuevos textos. La pasada completa final indicada arriba verifica esas correcciones.
+
 ## GitHub Pages, 13 de octubre
 
 - `npm run typecheck`: sin errores; `npm test`: **187 pasan, 1 omitida**; `npm run e2e`: **23/23 pasan** (2,8 minutos).

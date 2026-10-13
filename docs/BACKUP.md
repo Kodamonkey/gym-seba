@@ -35,6 +35,8 @@ La interfaz actual no incluye un botón para borrar toda la base. Eliminar un en
 
 ## Versiones de rutina
 
+El día pendiente (Día 1–4) se calcula desde la última sesión completa del programa y de un día que siga en la plantilla. Viaja con esos registros en el JSON: no depende de un contador separado ni de la fecha de importación. Parciales y descartadas no avanzan; si el historial antiguo tenía otro orden, continúa después de su última completa válida. La planificación semanal previa conserva sus fechas y vínculos en el respaldo, pero ya no decide qué día se puede empezar. Las nuevas sesiones de la secuencia no se vinculan a una fecha planificada y tienen `programWeek: null`; sus fechas reales se conservan.
+
 La rutina v2 actualiza la plantilla original v1 únicamente si sigue intacta y no hay sesión activa. Guarda ambas versiones en `routineVersions`, que se exporta en JSON. Conserva sesiones, calendario y decisiones.
 
 Para volver a la rutina anterior, importa un respaldo JSON previo con una política que reemplace la plantilla, después de finalizar el entrenamiento y conservar los datos actuales. La importación marca las plantillas realmente incorporadas para que una actualización automática no las sustituya; la marca se guarda en la misma transacción. Una fusión que no escribe la plantilla no cambia su procedencia.

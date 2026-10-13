@@ -84,7 +84,7 @@ export function FinishSheet({
   return (
     <Dialog open={open} onClose={close} title={discarding ? '¿Descartar entrenamiento?' : 'Terminar entrenamiento'} footer={footer}>
       {discarding ? (
-        <p className="text-[15px] text-muted">No aparecerá en tu historial ni contará para la semana.</p>
+        <p className="text-[15px] text-muted">No aparecerá en tu historial. Este día seguirá pendiente.</p>
       ) : (
         <>
           <p className="text-[34px] font-bold leading-none tabular">
@@ -92,8 +92,9 @@ export function FinishSheet({
             <span className="text-xl font-semibold text-muted"> / {expected} series</span>
           </p>
           <p className="mt-2 text-[15px] text-muted">
-            {done === 0 ? 'Aún no marcaste ninguna serie.' : complete ? '¡Completo! Buen trabajo.' : 'Se guardará como parcial. Las series sin marcar no cuentan.'}
+            {done === 0 ? 'Aún no marcaste ninguna serie. Este día seguirá pendiente.' : complete ? 'Al guardar, verás el próximo día pendiente.' : 'Se guardará como parcial en tu historial. Este día seguirá pendiente; las series sin marcar no cuentan.'}
           </p>
+          {done > 0 && !complete && <p className="mt-2 text-sm text-muted">Puedes seguir entrenando ahora. Si guardas, el próximo intento será una nueva sesión de este día.</p>}
         </>
       )}
     </Dialog>

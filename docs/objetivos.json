@@ -8,7 +8,8 @@
     "Pedido de registrar objetivos para otros agentes en chat (2026-10-12)",
     "Pedido de auditoría completa, alineación con objetivos y mejora móvil de UI/UX en chat (2026-10-12)",
     "Pedido de rutina basada en literatura y equipos de Vespucio, con alternativas si falta una máquina (2026-10-12–13); edad 25 años y ninguna restricción informadas por Seba",
-    "Pedido de subir los cambios a GitHub y publicar ATLAS en GitHub Pages para usarlo desde el celular (2026-10-13)"
+    "Pedido de subir los cambios a GitHub y publicar ATLAS en GitHub Pages para usarlo desde el celular (2026-10-13)",
+    "Pedido de seguir Día 1, Día 2, etc., avanzando solo al completar el día y sin saltarlo por ausencias (2026-10-13)"
   ],
   "usuario": {
     "nombre": "Seba",
@@ -35,15 +36,17 @@
     {
       "id": "P2",
       "objetivo": "Entrenar 4 días por semana, unos 60 minutos por sesión.",
-      "notas": "Lunes superior A, martes inferior A, jueves superior B, sábado inferior B. Miércoles, viernes y domingo: descanso o actividad opcional. Reparto orientativo: 7 min calentamiento, 40 fuerza, 10 cardio, 3 cierre.",
-      "estado": "en_curso"
+      "notas": "Objetivo orientativo de cuatro sesiones semanales, con fechas flexibles. Orden: Día 1 superior A, Día 2 inferior A, Día 3 superior B, Día 4 inferior B; vuelve Día 1 solo tras una completa. Ausencias y parciales conservan el día pendiente. Reparto orientativo: 7 min calentamiento, 40 fuerza, 10 cardio, 3 cierre.",
+      "estado": "en_curso",
+      "evidencia": "Pedido de Seba aplicado a Inicio/Día y startDay: secuencia derivada del historial real, independiente de la fecha. src/domain/sequence.ts; docs/RUTINA_SEBA.md. No equivale a sesiones realizadas.",
+      "actualizado": "2026-10-13"
     },
     {
       "id": "P3",
-      "objetivo": "Completar el programa inicial de 8 semanas.",
-      "notas": "Rutina v2: semanas 1–2 de adaptación con hasta dos series; después, dos o tres según ficha cuando corresponda salir de adaptación. RIR orientativo 2–3. Descansos principales 120 s. Las ocho semanas son un bloque inicial, no un plazo prometido para cambiar el físico.",
+      "objetivo": "Completar el bloque inicial de 32 entrenamientos (referencia: ocho semanas a cuatro por semana).",
+      "notas": "Rutina v2 sin vencimiento por calendario: primeros ocho entrenamientos completos en adaptación, hasta dos series. Después de confirmar el cambio, dos o tres según ficha. Las parciales no avanzan día ni adaptación. RIR orientativo 2–3; descansos principales 120 s. No hay plazo prometido para cambiar el físico.",
       "estado": "en_curso",
-      "evidencia": "Plan documentado en docs/RUTINA_SEBA.md y docs/EVIDENCIA_RUTINA.md; src/data/seed/routine.ts versión 2. No implica sesiones realizadas ni resultados personales logrados.",
+      "evidencia": "Plan documentado en docs/RUTINA_SEBA.md y docs/EVIDENCIA_RUTINA.md; src/data/seed/routine.ts versión 2. Secuencia y adaptación por completas en src/domain/sequence.ts, con decisiones explícitas y datos previos conservados. No implica sesiones realizadas ni resultados personales logrados.",
       "actualizado": "2026-10-13"
     },
     {
@@ -64,7 +67,7 @@
       "id": "A1",
       "objetivo": "App mínima, simple y clara (tema claro) para el celular: ver los días, la rutina y registrar series con pocos toques.",
       "estado": "hecho",
-      "evidencia": "Flujo Inicio → Día → Sesión conservado. Técnica y Cambiar a un toque; cada ejercicio v2 muestra alternativas identificadas. Guía breve de calentamiento/cardio y RIR; E2E móvil 320/375/390 px. docs/AUDITORIA_MOVIL.md y docs/RUTINA_SEBA.md.",
+      "evidencia": "Flujo Inicio → Día → Sesión conservado. Días numerados 1–4; Inicio propone el pendiente y otros días permiten consultar técnica antes de habilitar inicio. Técnica y Cambiar a un toque; alternativas v2. E2E móvil 320/375/390 px. docs/RUTINA_SEBA.md y pendiente 22 resuelto.",
       "actualizado": "2026-10-13",
       "pendientes": [12]
     },
@@ -72,7 +75,7 @@
       "id": "A2",
       "objetivo": "Registro de series rápido, persistente y recuperable (recargar o suspender no pierde datos; sin duplicados).",
       "estado": "hecho",
-      "evidencia": "Guardado automático, revisiones y recuperación probados. Sustituciones conservan series hechas y adaptan registro por lado/unidad, sin transferir cargas o sugerencias antiguas. Rutina v2 actualiza solo plantilla original intacta y sin sesión activa; preserva historial, fechas y decisiones. Pruebas de routine-upgrade, sustitución y E2E. Un cierre forzado antes del commit IndexedDB no está garantizado.",
+      "evidencia": "Guardado automático, revisiones y recuperación probados. El inicio valida el día pendiente y crea una única sesión en la misma transacción; parciales no avanzan. La posición se recupera del historial al importar JSON, sin cursor separado. Sesiones activas, series, fechas y planificación previa conservadas. Pruebas overview/sequence/routine-upgrade y E2E. Un cierre forzado antes del commit IndexedDB no está garantizado.",
       "actualizado": "2026-10-13"
     },
     {

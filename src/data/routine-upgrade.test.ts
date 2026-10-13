@@ -89,11 +89,11 @@ describe('actualización de la rutina original', () => {
     await finishSession(session.id, 'partial');
     const historicalExercises = await db.sessionExercises.where('sessionId').equals(session.id).toArray();
     const historicalSets = await db.setLogs.where('sessionId').equals(session.id).toArray();
-    const next = await startDay('day-lower-a', TZ);
+    const next = await startDay('day-upper-a', TZ);
     const nextExercises = await db.sessionExercises.where('sessionId').equals(next.id).sortBy('order');
     expect((await db.routineTemplates.get(TEMPLATE_ID))?.version).toBe(2);
-    expect(nextExercises[0]?.variantId).toBe(ROUTINE_TEMPLATE.days[1]!.exercises[0]!.variantId);
-    expect(nextExercises[0]?.prescribed.restSec).toBe(ROUTINE_TEMPLATE.days[1]!.exercises[0]!.restSec);
+    expect(nextExercises[0]?.variantId).toBe(ROUTINE_TEMPLATE.days[0]!.exercises[0]!.variantId);
+    expect(nextExercises[0]?.prescribed.restSec).toBe(ROUTINE_TEMPLATE.days[0]!.exercises[0]!.restSec);
     expect(await db.sessionExercises.where('sessionId').equals(session.id).toArray()).toEqual(historicalExercises);
     expect(await db.setLogs.where('sessionId').equals(session.id).toArray()).toEqual(historicalSets);
   });

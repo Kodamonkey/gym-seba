@@ -1,7 +1,9 @@
-import { addDays, DEFAULT_TZ, isoWeekday, startOfWeek, todayLocal } from '../domain/dates';
+import { DEFAULT_TZ, todayLocal } from '../domain/dates';
+import { routineSequence } from '../domain/sequence';
 import type { ID, SessionExercise, SetLog, WorkoutSession } from '../domain/types';
 import { db, nowIso } from './db';
-import { adaptationFor, createProgram, startFreeWorkout, startScheduledWorkout } from './program';
+import { adaptationFor, createProgram, plannedExercisesFor } from './program';
+import { ActiveSessionExistsError, startSession } from './sessions';
 import { ROUTINE_TEMPLATE } from './seed/routine';
 import { upgradeRoutine } from './routine-upgrade';
 
@@ -11,8 +13,8 @@ import { upgradeRoutine } from './routine-upgrade';
  */
 
 /**
- * Si no hay programa activo, lo crea y da el perfil por configurado. Empieza el lunes de esta
- * semana si hoy es lunes a miércoles; si no, el lunes siguiente (así la semana 1 es completa).
+ * Si no hay programa activo, lo crea y da el perfil por configurado. Empieza en la fecha local
+ * actual: la secuencia de días no necesita esperar un lunes ni una fecha del calendario.
  */
 export async function ensureProgram(): Promise<void> {
   await db.transaction('rw', [db.programs, db.scheduledWorkouts, db.routineTemplates, db.profile], async () => {
@@ -22,30 +24,43 @@ export async function ensureProgram(): Promise<void> {
     const template = (await db.routineTemplates.get(ROUTINE_TEMPLATE.id)) ?? (await db.routineTemplates.filter((t) => !t.archived).first());
     if (!template) return;
     const today = todayLocal(timeZone);
-    const startDate = isoWeekday(today) <= 3 ? startOfWeek(today) : addDays(startOfWeek(today), 7);
-    await createProgram({ templateId: template.id, startDate, timeZone });
+    await createProgram({ templateId: template.id, startDate: today, timeZone });
     if (profile && !profile.onboardedAt) await db.profile.update('me', { onboardedAt: nowIso(), updatedAt: nowIso() });
   });
 }
 
 /**
- * Inicia el entrenamiento de un día de la rutina. Si ese día tiene una sesión planificada esta
- * semana sin registro, la usa (el calendario queda al día); si no, inicia una sesión libre.
+ * Inicia únicamente el siguiente día de la secuencia. La última sesión completa determina
+ * cuál sigue; las parciales, ausencias y fechas planificadas no adelantan la rutina.
+ * La validación y la creación comparten transacción para proteger otra pestaña o importación.
  */
 export async function startDay(dayId: ID, timeZone: string): Promise<WorkoutSession> {
   await upgradeRoutine();
-  const program = await db.programs.where('status').equals('active').first();
-  const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
-  if (!program || !template) throw new Error('No hay una rutina activa.');
-  const today = todayLocal(timeZone);
-  const from = startOfWeek(today);
-  const to = addDays(from, 6);
-  const planned = (await db.scheduledWorkouts.where('programId').equals(program.id).toArray())
-    .filter((sw) => sw.dayId === dayId && sw.sessionId === null && sw.date >= from && sw.date <= to)
-    .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
-  if (planned) return startScheduledWorkout(planned.id, timeZone);
-  const adaptation = await adaptationFor(program, template, today);
-  return startFreeWorkout(template.id, dayId, timeZone, adaptation.active);
+  return db.transaction('rw', [
+    db.programs, db.routineTemplates, db.programDecisions, db.sessions, db.sessionExercises,
+    db.setLogs, db.scheduledWorkouts, db.variants, db.equipment, db.meta,
+  ], async () => {
+    const active = await db.sessions.where('status').equals('active').first();
+    if (active) throw new ActiveSessionExistsError(active.id);
+    const program = await db.programs.where('status').equals('active').first();
+    const template = program ? await db.routineTemplates.get(program.templateId) : undefined;
+    if (!program || !template || template.archived) throw new Error('No hay una rutina activa.');
+    const sequence = routineSequence(program.id, template.days, await db.sessions.toArray());
+    const day = template.days.find((d) => d.id === sequence.nextDayId);
+    if (!day) throw new Error('La rutina no tiene días de entrenamiento.');
+    if (dayId !== day.id) throw new Error(`Primero completa el Día ${sequence.nextDayNumber}: ${day.name}.`);
+    const adaptation = await adaptationFor(program, template, todayLocal(timeZone));
+    return startSession({
+      programId: program.id,
+      scheduledWorkoutId: null,
+      dayId: day.id,
+      title: day.name,
+      timeZone,
+      programWeek: null,
+      adaptation: adaptation.active,
+      exercises: plannedExercisesFor(day, template, adaptation.active),
+    });
+  });
 }
 
 export interface LastPerformance {

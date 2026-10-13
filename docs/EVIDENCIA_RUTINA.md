@@ -21,12 +21,12 @@ Las siguientes son publicaciones originales de las revisiones, ensayos y organis
 
 ACSM propone 2–3 repeticiones en reserva para alcanzar esfuerzo suficiente sin exigir fallo muscular. Es la referencia elegida para el bloque inicial. [ACSM, 2026](https://pmc.ncbi.nlm.nih.gov/articles/PMC12965823/)
 
-## Decisiones de programación para estas ocho semanas
+## Decisiones de programación para el bloque inicial
 
 Esta sección expresa decisiones prácticas de ATLAS derivadas del contexto y de la evidencia anterior. Los estudios no probaron esta combinación exacta de ejercicios, agenda y tiempos.
 
-- **Distribución:** lunes superior A, martes inferior A, jueves superior B y sábado inferior B. Mantiene dos oportunidades semanales por región sin añadir días al compromiso de Seba.
-- **Adaptación:** semanas 1–2, dos series de trabajo por ejercicio. Las series de aproximación con menos carga sirven para preparar el movimiento y no cuentan como trabajo registrado.
+- **Distribución:** Día 1 superior A, Día 2 inferior A, Día 3 superior B y Día 4 inferior B. A cuatro sesiones por semana ofrece dos oportunidades por región; las fechas son flexibles. Una ausencia o parcial conserva el día pendiente y al completar el cuarto vuelve el primero.
+- **Adaptación:** primeros ocho entrenamientos completos, hasta dos series de trabajo por ejercicio; equivalen a las semanas 1–2 si entrenas cuatro veces por semana. El cambio de fase exige confirmación y no depende del calendario. Las series de aproximación con menos carga sirven para preparar el movimiento y no cuentan como trabajo registrado.
 - **Después de la adaptación:** dos o tres series por ejercicio según la ficha. Mantener el programa antes de añadir volumen permite evaluar adherencia, duración, repeticiones y tolerancia.
 - **Repeticiones del plan v2:** 8–12 en presses, jalones, sentadillas e hip thrust; 8–10 en el rumano; 10–12 en prensa y remos; 10–15 en curls, tríceps, extensión de piernas y crunch; 12–20 en elevaciones laterales, aperturas inversas y pantorrillas. Pallof: diez por lado, o 20–30 segundos por lado al elegir su alternativa isométrica. Son rangos fáciles de registrar, no zonas biológicas exclusivas.
 - **Esfuerzo:** terminar normalmente con 2–3 RIR. Durante el aprendizaje, priorizar un recorrido cómodo y controlado y detener la serie si la técnica deja de ser consistente. No buscar repeticiones forzadas.
@@ -35,13 +35,13 @@ Esta sección expresa decisiones prácticas de ATLAS derivadas del contexto y de
 - **Duración:** aproximadamente siete minutos de calentamiento, cuarenta de fuerza, diez de cardio y tres de cierre. La estimación incluye transiciones; las esperas por equipos pueden alargarla. No recortar el descanso principal ni acelerar repeticiones para fingir que se cumplió una hora exacta.
 - **Cardio:** caminar en cinta, pedalear o usar elíptica a intensidad moderada después de la fuerza, según disponibilidad y comodidad. Como orientación de intensidad moderada, poder conversar, pero no cantar. [CDC](https://www.cdc.gov/physical-activity-basics/measuring/) Aumentar gradualmente la actividad semanal, por ejemplo con caminatas rápidas, si Seba desea acercarse a la recomendación de salud.
 
-«Atlético» combina cualidades distintas. Este bloque desarrolla una base muscular y cardiovascular; no constituye un programa específico de velocidad, salto o rendimiento en un deporte. Al terminar las ocho semanas, evaluar sesiones reales, cargas, repeticiones, tiempo y tolerancia antes de decidir el bloque siguiente. No utilizar la semana ocho como fecha prometida de un cambio estético.
+«Atlético» combina cualidades distintas. Este bloque desarrolla una base muscular y cardiovascular; no constituye un programa específico de velocidad, salto o rendimiento en un deporte. La referencia inicial son 32 entrenamientos, unas ocho semanas a cuatro por semana. Evaluar sesiones reales, cargas, repeticiones, tiempo y tolerancia antes de decidir el bloque siguiente. No utilizar esa referencia como fecha prometida de un cambio estético.
 
 ## Comparación con la rutina existente
 
 Al revisar `src/data/seed/routine.ts` antes del cambio, había seis ejercicios y catorce series por día desde la semana tres: 56 series semanales distribuidas entre regiones. La adaptación era de doce series por día. Se cubrían empuje, tirón, bisagra, sentadilla, rodilla, pantorrilla y tronco, con alternativas de máquinas y pesos libres.
 
-El plan v2 conserva seis ejercicios y catorce series por día desde la semana tres. Amplía descansos principales y rangos de algunos accesorios, prioriza variantes sencillas y ofrece alternativas existentes en el catálogo. Los recuentos siguientes también describen la selección principal de v2; las sustituciones pueden modificar el reparto muscular.
+El plan v2 conserva seis ejercicios y catorce series por día después de confirmar el fin de adaptación. Amplía descansos principales y rangos de algunos accesorios, prioriza variantes sencillas y ofrece alternativas existentes en el catálogo. Los recuentos siguientes también describen la selección principal de v2; las sustituciones pueden modificar el reparto muscular.
 
 | Región o patrón | Series directas semanales de las variantes principales | Lectura práctica |
 |---|---:|---|

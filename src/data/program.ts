@@ -1,11 +1,11 @@
 import { isoWeekday, todayLocal } from '../domain/dates';
 import {
-  adaptationState,
   effectivePrescription,
   programWeek,
   recurrenceDates,
   type AdaptationState,
 } from '../domain/schedule';
+import { routineSequence, sequenceAdaptationState } from '../domain/sequence';
 import type {
   ID,
   LocalDate,
@@ -151,12 +151,19 @@ export async function recordDecision(programId: ID, kind: ProgramDecisionKind, d
   await db.programDecisions.add({ id: uid(), programId, kind, detail, createdAt: nowIso() });
 }
 
-/** Mantener la adaptación: la extiende hasta el final de la semana de programa en curso (o la siguiente). */
+/** Mantener la adaptación: extiende el umbral por bloques de días de la rutina, sin usar el calendario. */
 export async function keepAdaptation(program: Program, today: LocalDate, extraWeeks = 1): Promise<void> {
-  const week = programWeek(program.startDate, today);
-  const newWeeks = Math.max(program.adaptationWeeks, week - 1) + extraWeeks;
-  await db.programs.update(program.id, { adaptationWeeks: newWeeks, updatedAt: nowIso() });
-  await recordDecision(program.id, 'keep-adaptation', `Adaptación extendida hasta la semana ${newWeeks}.`);
+  // `today` se conserva en la API para sus llamadas anteriores; una ausencia no amplía el umbral.
+  void today;
+  await db.transaction('rw', [db.programs, db.routineTemplates, db.sessions, db.programDecisions], async () => {
+    const current = await db.programs.get(program.id);
+    const template = current ? await db.routineTemplates.get(current.templateId) : undefined;
+    if (!current || !template || template.days.length === 0) throw new Error('No hay una rutina activa.');
+    const sequence = routineSequence(current.id, template.days, await db.sessions.toArray());
+    const newWeeks = Math.max(current.adaptationWeeks, Math.floor(sequence.completedCount / template.days.length)) + extraWeeks;
+    await db.programs.update(current.id, { adaptationWeeks: newWeeks, updatedAt: nowIso() });
+    await recordDecision(current.id, 'keep-adaptation', `Adaptación extendida hasta ${newWeeks * template.days.length} sesiones completas.`);
+  });
 }
 
 export async function endAdaptation(program: Program): Promise<void> {
@@ -165,14 +172,14 @@ export async function endAdaptation(program: Program): Promise<void> {
 
 export async function adaptationFor(program: Program, template: RoutineTemplate, today: LocalDate): Promise<AdaptationState> {
   const sessions = await db.sessions.where('status').anyOf('completed', 'partial').toArray();
-  const activity = sessions.filter((s) => s.programId === program.id);
+  const dayIds = new Set(template.days.map((day) => day.id));
+  const activity = sessions.filter((s) => s.programId === program.id && s.dayId !== null && dayIds.has(s.dayId));
   const decisions = await db.programDecisions.where('programId').equals(program.id).toArray();
-  return adaptationState({
+  return sequenceAdaptationState({
     program,
     daysPerWeek: template.days.length,
     today,
-    completedDates: activity.filter((s) => s.status === 'completed').map((s) => s.localDate),
-    activityDates: activity.map((s) => s.localDate),
+    sessions: activity,
     decisions,
   });
 }

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { exercise, humanPause, logSet, startDay } from './helpers';
+import { completeDay, exercise, humanPause, logSet, startDay } from './helpers';
 
 test('el inicio muestra los días de la rutina sin configuración inicial', async ({ page }) => {
   await page.goto('/');
@@ -10,11 +10,17 @@ test('el inicio muestra los días de la rutina sin configuración inicial', asyn
   }
 });
 
-test('creada un domingo, la semana 1 empieza el lunes siguiente', async ({ page }) => {
+test('creada un domingo, ofrece el Día 1 y no salta por faltar a entrenar', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-11T15:00:00-03:00') });
   await page.goto('/');
-  await expect(page.getByText('Semana 1 empieza el lunes 12 oct')).toBeVisible();
-  await expect(page.getByText('Descanso', { exact: true })).toBeVisible();
+  await expect(page.getByText('Siguiente entrenamiento', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Empezar', exact: true })).toBeVisible();
+  await page.clock.setSystemTime(new Date('2026-10-20T15:00:00-03:00'));
+  await page.reload();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
+  await expect(page.getByText(/^0 entrenamientos completos(?: · adaptación)?$/)).toBeVisible();
+  await expect(page.getByText('Descanso', { exact: true })).toHaveCount(0);
 });
 
 test('registro una serie, recargo y recupero los datos y el descanso', async ({ page }) => {
@@ -62,15 +68,46 @@ test('los borradores no cuentan; terminar guarda como parcial y queda en el hist
   await page.getByRole('button', { name: 'Seguir entrenando' }).click();
   await logSet(page, 0, '50', '8');
   await page.getByRole('button', { name: 'Terminar', exact: true }).click();
-  await expect(page.getByText('Se guardará como parcial.', { exact: false })).toBeVisible();
+  await expect(page.getByText(/^Se guardará como parcial en tu historial\./)).toBeVisible();
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Mi rutina' })).toBeVisible();
-  await expect(page.getByLabel('Parcial esta semana')).toBeVisible();
-  await expect(page.getByLabel('Hecho esta semana')).toHaveCount(0);
-  await expect(page.getByText('0/4 completas esta semana')).toBeVisible();
+  await expect(page.getByText(/^0 entrenamientos completos(?: · adaptación)?$/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
   await page.getByRole('link', { name: 'Ver todo' }).click();
   await page.getByRole('link', { name: /Tren superior A/ }).click();
   await expect(page.getByText('50 × 8')).toBeVisible();
+});
+
+test('completar el Día 1 avanza al Día 2; recargar y guardar una parcial sin conexión conserva el turno', async ({ page, context }) => {
+  test.slow();
+  await page.goto('/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+
+  await page.goto('/dia/day-lower-a');
+  await expect(page.getByText(/^Completa el Día 1 para avanzar\.?$/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Empezar', exact: true })).toHaveCount(0);
+  await startDay(page);
+  await completeDay(page);
+  await expect(page.getByText(/^1 entrenamiento completo(?: · adaptación)?$/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 2.*Tren inferior A/ }).first()).toBeVisible();
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('link', { name: /Día 2.*Tren inferior A/ }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Empezar', exact: true }).click();
+  await expect(page).toHaveURL(/\/sesion$/);
+  await logSet(page, 0, '40', '10', 'Prensa de piernas');
+  await page.getByRole('button', { name: 'Terminar', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Terminar entrenamiento', exact: true }).getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Mi rutina', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/^1 entrenamiento completo(?: · adaptación)?$/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 2.*Tren inferior A/ }).first()).toBeVisible();
+  await context.setOffline(false);
 });
 
 test('dos pestañas: una edita, la otra queda en solo lectura y puede tomar el control', async ({ page, context }) => {

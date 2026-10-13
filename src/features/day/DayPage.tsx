@@ -2,7 +2,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useActiveSession, useTimeZone, useToday } from '../../app/hooks';
-import { weekdayName } from '../../domain/dates';
 import { effectivePrescription } from '../../domain/schedule';
 import type { SetLog } from '../../domain/types';
 import { db, userMessage } from '../../data/db';
@@ -39,7 +38,7 @@ export function DayPage() {
   const last = useLiveQuery(() => lastPerformanceByVariant(ids), [ids.join()]);
 
   if (!plan || active === undefined || !variants) return <Loading />;
-  if (!template || !day) {
+  if (!template || !day || !plan.sequence) {
     return (
       <>
         <PageHeader back="/" />
@@ -49,7 +48,9 @@ export function DayPage() {
   }
 
   const adaptation = plan.adaptation?.active ?? true;
-  const weekday = plan.program?.weekdays[day.id] ?? day.weekday;
+  const dayNumber = template.days.findIndex((d) => d.id === day.id) + 1;
+  const sequence = plan.sequence;
+  const isNext = sequence.nextDayId === day.id;
 
   async function start() {
     setBusy(true);
@@ -67,7 +68,7 @@ export function DayPage() {
   return (
     <div className="flex min-h-dvh flex-col">
       <PageHeader back="/" subtitle="Tu entrenamiento" />
-      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted">{weekdayName(weekday)}</p>
+      <p className="text-[13px] font-semibold uppercase tracking-wider text-muted">Día {dayNumber}</p>
       <h1 className="mt-0.5 text-[28px] font-bold leading-tight tracking-tight">{day.name}</h1>
       <p className="mt-1 text-sm text-muted">
         {day.exercises.length} ejercicios · ~{dayMinutes(day)} min{adaptation ? ' · adaptación' : ''}
@@ -136,14 +137,23 @@ export function DayPage() {
       </details>
 
       <div className="sticky bottom-0 -mx-4 mt-4 bg-bg/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        {active && active.dayId !== day.id ? (
-          <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate('/sesion')}>
-            Tienes «{active.title}» en curso
+        {active ? (
+          <Button variant="primary" size="lg" className="w-full" onClick={() => navigate('/sesion')}>
+            {active.dayId === day.id ? 'Continuar' : `Continuar «${active.title}»`}
           </Button>
+        ) : isNext ? (
+          <Button variant="primary" size="lg" className="w-full" busy={busy} onClick={start}>
+            Empezar
+          </Button>
+        ) : sequence.nextDayId ? (
+          <>
+            <p className="mb-2 text-center text-sm text-muted">Completa el Día {sequence.nextDayNumber} para avanzar.</p>
+            <Button variant="secondary" size="lg" className="w-full" onClick={() => navigate(`/dia/${sequence.nextDayId}`)}>
+              Ver Día {sequence.nextDayNumber} pendiente
+            </Button>
+          </>
         ) : (
-          <Button variant="primary" size="lg" className="w-full" busy={busy} onClick={() => (active ? navigate('/sesion') : start())}>
-            {active ? 'Continuar' : 'Empezar'}
-          </Button>
+          <p className="py-3 text-center text-sm text-muted">No hay un día pendiente.</p>
         )}
       </div>
 

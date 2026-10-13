@@ -6,13 +6,15 @@ La base combina empujes, tirones, piernas y tronco. Busca desarrollar pecho, esp
 
 La investigación y sus límites están en [EVIDENCIA_RUTINA.md](EVIDENCIA_RUTINA.md). La elección exacta de ejercicios y rangos es una decisión práctica para este contexto; los estudios no probaron esta rutina individual.
 
+**Orden flexible, actualizado el 13 de octubre:** Día 1 superior A, Día 2 inferior A, Día 3 superior B y Día 4 inferior B; luego vuelve el Día 1. La app propone el siguiente después de guardar una sesión completa, independientemente del día de la semana. Una ausencia no salta el entrenamiento. Una parcial conserva sus registros, pero deja ese día pendiente; el siguiente intento es otra sesión, sin fusionar ni inventar series. La fecha real de cada sesión sigue registrada en `America/Santiago`.
+
 ## Equipos de la sede
 
 La [ficha oficial de Smart Fit Mall Plaza Vespucio](https://www.smartfit.cl/gimnasios/mall-plaza-vespucio) confirma peso libre, peso integrado y cardio; no publica un inventario por máquina. Seba cree haber visto prensa, jalón, remo, curl femoral, extensión, Smith y bancos con mancuernas. Es una referencia provisional, no identificación de modelos, agarres, incrementos ni resistencias base. Ver [EQUIPOS_VESPUCIO.md](EQUIPOS_VESPUCIO.md).
 
 Cada ejercicio tiene opciones en **Cambiar**, dentro de la sesión. Las máquinas exactas siguen por verificar. Una alternativa puede trabajar la región con otro patrón: la app distingue «Mismo ejercicio» de «Otro movimiento», cambia técnica y demostración y no copia cargas de la variante anterior.
 
-## Lunes — Tren superior A
+## Día 1 — Tren superior A
 
 | Ejercicio | Series × repeticiones | Descanso | Alternativa principal |
 |---|---:|---:|---|
@@ -23,7 +25,7 @@ Cada ejercicio tiene opciones en **Cambiar**, dentro de la sesión. Las máquina
 | Elevaciones laterales con mancuernas | 2 × 12–20 | 60 s | Elevación unilateral en polea, por lado |
 | Tríceps en polea con cuerda | 2 × 10–15 | 75 s | Máquina de extensión de tríceps |
 
-## Martes — Tren inferior A
+## Día 2 — Tren inferior A
 
 | Ejercicio | Series × repeticiones | Descanso | Alternativa principal |
 |---|---:|---:|---|
@@ -34,7 +36,7 @@ Cada ejercicio tiene opciones en **Cambiar**, dentro de la sesión. Las máquina
 | Pantorrillas con mancuernas | 2 × 12–20 | 60 s | Máquina o Smith, con apoyo estable |
 | Pallof press | 2 × 10 por lado | 60 s | Pallof isométrico, 20–30 s por lado |
 
-## Jueves — Tren superior B
+## Día 3 — Tren superior B
 
 | Ejercicio | Series × repeticiones | Descanso | Alternativa principal |
 |---|---:|---:|---|
@@ -45,7 +47,7 @@ Cada ejercicio tiene opciones en **Cambiar**, dentro de la sesión. Las máquina
 | Elevaciones laterales con mancuernas | 2 × 12–20 | 60 s | Elevación unilateral en polea, por lado |
 | Curl de bíceps con mancuernas | 2 × 10–15 | 75 s | Curl en polea |
 
-## Sábado — Tren inferior B
+## Día 4 — Tren inferior B
 
 | Ejercicio | Series × repeticiones | Descanso | Alternativa principal |
 |---|---:|---:|---|
@@ -60,9 +62,9 @@ Miércoles, viernes y domingo quedan para descanso o actividad suave opcional. N
 
 ## Cómo empezar y progresar
 
-**Semanas 1–2:** hasta dos series de trabajo por ejercicio. Primero aprender ajustes y técnica. Practicar con cargas ligeras de aproximación antes del primer movimiento exigente; esas series preparatorias no se contabilizan como trabajo. No hace falta una prueba máxima.
+**Primeros ocho entrenamientos completos:** hasta dos series de trabajo por ejercicio. Equivale a las dos semanas iniciales si entrenas cuatro veces por semana; una ausencia o parcial no acorta esta fase. Primero aprender ajustes y técnica. Practicar con cargas ligeras de aproximación antes del primer movimiento exigente; esas series preparatorias no se contabilizan como trabajo. No hace falta una prueba máxima.
 
-**Desde la semana 3:** usar las series de las tablas cuando corresponda salir de adaptación. Si faltaron sesiones, la app conserva una decisión de adaptación explícita; no añade volumen solo porque avanzó el calendario.
+**Después de confirmar el fin de adaptación:** usar las series de las tablas. Al alcanzar ocho completas, la app ofrece el cambio, pero mantiene las series de adaptación hasta tu decisión. «Todavía no» extiende el objetivo por otro bloque de cuatro entrenamientos completos. Las decisiones anteriores se conservan; una pausa de al menos 14 días puede ofrecer volver a adaptación, sin saltar el día pendiente.
 
 Terminar las series normalmente con **2–3 repeticiones en reserva**: repeticiones adicionales que crees que podrías completar con la misma técnica. Mantener la carga hasta llegar al extremo alto del rango en todas las series, con control y RIR adecuados. Después considerar el menor incremento disponible. No aumentar con dolor, técnica deteriorada o sesión incompleta. La aplicación no asigna kilos iniciales ni certifica por sí sola esas condiciones.
 
@@ -76,7 +78,7 @@ Después de la fuerza, usar caminadora, bicicleta o elíptica disponible a inten
 
 Cuatro bloques de diez minutos suman 40 minutos semanales. Son un inicio: aumentar gradualmente la actividad total hacia los 150–300 minutos moderados semanales de la recomendación de salud, por ejemplo mediante caminatas rápidas fuera del gimnasio. El bloque no sustituye un programa específico de velocidad, salto o deporte. [OMS: actividad física](https://www.ncbi.nlm.nih.gov/books/NBK566046/)
 
-Al finalizar ocho semanas, revisar las sesiones realmente hechas, cargas, repeticiones, duración y tolerancia antes de elegir el siguiente bloque. No se marca el objetivo estético como logrado por llegar a la semana ocho.
+La referencia inicial son 32 entrenamientos, unas ocho semanas a cuatro por semana. Revisa sesiones realmente hechas, cargas, repeticiones, duración y tolerancia antes de elegir el siguiente bloque. La app no caduca por calendario ni marca el objetivo estético como logrado por acumular entrenamientos.
 
 ## Actualización en ATLAS
 

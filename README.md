@@ -4,7 +4,7 @@ Aplicación web personal, *mobile-first* y *local-first* para entrenar en el gim
 
 - Sin cuenta, sin backend, sin analítica: los datos viven en el navegador (IndexedDB).
 - Funciona sin conexión después de abrirla una vez (PWA con service worker).
-- Rutina de 8 semanas y 4 días (superior/inferior) precargada; el programa se crea solo al abrir la app (sin configuración inicial).
+- Rutina precargada de cuatro días consecutivos (superior/inferior): Día 1–4 y vuelta al Día 1. Solo una sesión completa avanza; faltar o guardar una parcial conserva el día pendiente.
 - 39 demostraciones anatómicas propias (SVG animado en vivo) para todas las variantes principales y alternativas.
 
 > **Estado honesto.** Las animaciones, los textos de técnica y las asociaciones musculares fueron creados por este proyecto y **no tienen revisión biomecánica profesional**. No se compraron ni incorporaron medios de terceros. La rutina es la configuración acordada para la app, no una prescripción médica. Ver [docs/PENDIENTES.md](docs/PENDIENTES.md).
@@ -34,7 +34,9 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. No hay configuración inicial: el perfil (172 cm, 82 kg) viene precargado y el programa empieza el lunes de la semana en curso (o el siguiente, si se abre de jueves a domingo).
+Abre `http://localhost:5173`. No hay configuración inicial: el perfil (172 cm, 82 kg) viene precargado y puedes empezar el Día 1 en cualquier fecha. El orden lo dirige la última sesión completa de la rutina; la fecha real de cada entrenamiento queda registrada en Santiago. El objetivo inicial equivale a 32 entrenamientos (unas ocho semanas a cuatro por semana), sin caducar por ausencias.
+
+La adaptación cuenta entrenamientos completos: inicialmente ocho con hasta dos series por ejercicio. Al alcanzar ese objetivo, la app pide confirmar antes de pasar a las series completas. Las parciales conservan sus series en el historial, pero no adelantan el día ni esta fase; al volver a empezar ese día se crea otra sesión.
 
 ## Scripts
 

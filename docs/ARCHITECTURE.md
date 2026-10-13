@@ -18,15 +18,16 @@ React 19.3 · TypeScript 7.0 · Vite 8.3 · Tailwind CSS 4.3 · react-router 8.4
 
 Sin librería de iconos, gráficos ni animación: los iconos son SVG en línea (`src/ui/icons.tsx`) y las microanimaciones son CSS (respetan `prefers-reduced-motion`).
 
-## Interfaz (rediseño minimalista, 2026-10-11)
+## Interfaz (rediseño minimalista, actualizada el 2026-10-13)
 
 App de un solo usuario, un solo gimnasio y una rutina fija; prioridad: simple, clara y usable con una mano.
 
-- **Pantallas:** Inicio (`/`: lo que toca hoy, los días de la rutina con su estado de la semana y los últimos entrenamientos) → Día (`/dia/:id`: ejercicios, objetivo, lo de la última vez, técnica a un toque y "Empezar") → Sesión (`/sesion`: todos los ejercicios en una lista vertical, filas kg × reps con check) → Historial (`/historial`, `/historial/:id`) · Ajustes (`/ajustes`: descanso y respaldo).
-- **Sin configuración inicial:** `ensureProgram` (`src/data/overview.ts`) crea el programa la primera vez y marca el perfil como configurado. Empieza el lunes de esta semana si se abre de lunes a miércoles; si no, el lunes siguiente.
-- **Empezar un día:** `startDay` usa la sesión planificada de ese día en la semana actual si está libre (el calendario interno queda al día aunque se entrene otro día); si no, inicia una sesión libre.
+- **Pantallas:** Inicio (`/`: siguiente Día 1–4, completas reales y últimos entrenamientos) → Día (`/dia/:id`: ejercicios, objetivo, lo de la última vez, técnica a un toque y "Empezar" solo para el pendiente) → Sesión (`/sesion`: todos los ejercicios en una lista vertical, filas kg × reps con check) → Historial (`/historial`, `/historial/:id`) · Ajustes (`/ajustes`: descanso y respaldo).
+- **Sin configuración inicial:** `ensureProgram` (`src/data/overview.ts`) crea el programa en la fecha local actual y marca el perfil como configurado. No hace falta esperar un lunes.
+- **Empezar un día:** `routineSequence` (`src/domain/sequence.ts`) deriva el próximo del orden de la plantilla y de la última completa válida del programa. `startDay` valida ese día y crea la sesión en una sola transacción; parciales, descartadas y ausencias no avanzan. Las sesiones nuevas no se vinculan al calendario (`scheduledWorkoutId` y `programWeek` nulos); fechas y vínculos anteriores quedan intactos. El JSON restaura la posición desde los registros, sin cursor adicional.
+- **Adaptación:** el objetivo inicial son `adaptationWeeks × días de la rutina` sesiones completas. `sequenceAdaptationState` mantiene la fase hasta alcanzar el objetivo y decidir terminarla; «Todavía no» extiende el umbral por otro bloque de días. Las fechas detectan inactividad de 14 días, pero no aumentan volumen ni saltan días.
 - **Registro rápido:** con los campos vacíos, el check guarda lo que se ve en gris (última vez de esa variante o, si no hay, la serie anterior de hoy). Enter en kg pasa a reps; Enter en reps marca la serie. Tocar una serie hecha la reabre para corregirla.
-- **Terminar:** se guarda como completa si están todas las series de trabajo, o como parcial si no; descartar no borra datos (queda `discarded`).
+- **Terminar:** se guarda como completa si están todas las series de trabajo y habilita el próximo día (tras el Día 4 vuelve Día 1). Una parcial conserva registros sin avanzar y el nuevo intento crea otra sesión. Descartar no borra datos (queda `discarded`).
 - **Tema:** solo claro. Tokens en `:root` de `src/index.css`; negro como acción principal, verde solo para "hecho". Diálogos como hoja inferior (`<dialog>` nativo).
 - **Retirado de la interfaz** (el modelo de datos y sus pruebas siguen): configuración inicial, editor de rutina y biblioteca, calendario, progreso y gráficos, instancias de máquina y notas, RIR, calentamientos, técnica/dolor por ejercicio, tarjeta de progresión, cardio, temas y acento, fuentes y galería de demostraciones, reproductor de medios externos.
 

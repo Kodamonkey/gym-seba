@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { adaptationState, planStatus, programWeek, type PlanStatus } from '../domain/schedule';
+import { planStatus, programWeek, type AdaptationState, type PlanStatus } from '../domain/schedule';
+import { routineSequence, sequenceAdaptationState, type RoutineSequence } from '../domain/sequence';
 import type { Program, RoutineDay, RoutineTemplate, ScheduledWorkout, WorkoutSession } from '../domain/types';
 import { db } from '../data/db';
 
@@ -16,7 +17,8 @@ export interface PlanSnapshot {
   items: PlannedItem[];
   sessions: WorkoutSession[];
   week: number | null;
-  adaptation: ReturnType<typeof adaptationState> | null;
+  adaptation: AdaptationState | null;
+  sequence: RoutineSequence | null;
 }
 
 /** Vista derivada del programa activo y su calendario (se actualiza en vivo). */
@@ -24,7 +26,7 @@ export function usePlan(today: string): PlanSnapshot | undefined {
   return useLiveQuery(async () => {
     const program = await db.programs.where('status').equals('active').first();
     const sessions = await db.sessions.toArray();
-    if (!program) return { program: undefined, template: undefined, items: [], sessions, week: null, adaptation: null };
+    if (!program) return { program: undefined, template: undefined, items: [], sessions, week: null, adaptation: null, sequence: null };
     const template = await db.routineTemplates.get(program.templateId);
     const sws = await db.scheduledWorkouts.where('programId').equals(program.id).toArray();
     const sessionById = new Map(sessions.map((s) => [s.id, s]));
@@ -35,17 +37,18 @@ export function usePlan(today: string): PlanSnapshot | undefined {
       })
       .sort((a, b) => (a.sw.date < b.sw.date ? -1 : a.sw.date > b.sw.date ? 1 : 0));
     const decisions = await db.programDecisions.where('programId').equals(program.id).toArray();
-    const activity = sessions.filter((s) => s.programId === program.id && (s.status === 'completed' || s.status === 'partial'));
+    const validDayIds = new Set(template?.days.map(day => day.id));
+    const activity = sessions.filter((s) => s.programId === program.id && s.dayId !== null && validDayIds.has(s.dayId));
     const adaptation = template
-      ? adaptationState({
+      ? sequenceAdaptationState({
           program,
           daysPerWeek: template.days.length,
           today,
-          completedDates: activity.filter((s) => s.status === 'completed').map((s) => s.localDate),
-          activityDates: activity.map((s) => s.localDate),
+          sessions: activity,
           decisions,
         })
       : null;
-    return { program, template, items, sessions, week: programWeek(program.startDate, today), adaptation };
+    const sequence = template ? routineSequence(program.id, template.days, sessions) : null;
+    return { program, template, items, sessions, week: programWeek(program.startDate, today), adaptation, sequence };
   }, [today]);
 }

@@ -114,15 +114,15 @@ test('el borrador se guarda con el campo enfocado y sobrevive a una recarga', as
   await expect(ex.getByRole('button', { name: 'Serie 1 hecha. Tocar para corregir', exact: true })).toHaveCount(0);
 });
 
-test('el final del calendario de ocho semanas no inventa un programa completado', async ({ page }) => {
+test('ocho semanas sin entrenar mantienen el Día 1 y no inventan un programa completado', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-12T10:00:00-03:00') });
   await page.goto('/');
-  await expect(page.getByText('Semana 1 de 8', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
   await page.clock.setSystemTime(new Date('2026-12-07T10:00:00-03:00'));
   await page.reload();
-  await expect(page.getByText('Período de 8 semanas finalizado', { exact: true })).toBeVisible();
-  await expect(page.getByText('Tu rutina sigue disponible', { exact: true })).toBeVisible();
-  await expect(page.getByText('0/4 completas esta semana', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Día 1.*Tren superior A/ }).first()).toBeVisible();
+  await expect(page.getByText(/^0 entrenamientos completos(?: · adaptación)?$/)).toBeVisible();
+  await expect(page.getByText('Período de 8 semanas finalizado', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Semana 8 de 8', { exact: false })).toHaveCount(0);
   await expect(page.getByText('Programa completado', { exact: false })).toHaveCount(0);
   await expect(page.getByText('Objetivo logrado', { exact: false })).toHaveCount(0);

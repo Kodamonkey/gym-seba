@@ -21,6 +21,8 @@ En la preparación de E2E se corrigieron helpers: esperar los ejercicios antes d
 
 **Regresión detectada en Pages:** al guardar y volver a Inicio, el router eliminaba la barra final y dejaba `/gym-seba`, fuera del scope `/gym-seba/`; recargar sin conexión fallaba. Se reprodujo en HTTPS y con la nueva prueba de subcarpeta, que falló antes de corregir el router y pasó después. `BrowserRouter` conserva `BASE_URL` completa. La prueba comprueba tanto `navigate('/')` al guardar como el enlace «Volver», la recarga offline y la serie en el historial. Esta prueba complementa los 24 escenarios de raíz; no necesita descargar un navegador.
 
+**Publicación comprobada:** [Actions 38346921380](https://github.com/Kodamonkey/gym-seba/actions/runs/38346921380) terminó correctamente para `ae038fd`. La URL HTTPS sirve la build corregida `index-BZqqM1xe.js`. En un contexto Edge aislado, a 320/375 px: Día 2 permite consultar pero bloquea empezar; completar Día 1 habilita Día 2; recargar Inicio offline funciona dentro de `/gym-seba/`; registrar y recuperar **42,5 × 10** en Día 2, guardarlo parcial y recargar conserva Día 2. El JSON contiene una completa y una parcial con fechas Santiago, sin vínculos nuevos al calendario. Manifest y scope correctos, sin errores JavaScript. Capturas de Inicio y Día inspeccionadas; sin desbordamiento y botón Ajustes de al menos 44 px. Ninguno de esos registros de prueba se incorporó a los datos de Seba.
+
 ## GitHub Pages, 13 de octubre
 
 - `npm run typecheck`: sin errores; `npm test`: **187 pasan, 1 omitida**; `npm run e2e`: **23/23 pasan** (2,8 minutos).
